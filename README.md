@@ -97,7 +97,8 @@ pm_stop_server(port = 8080)
 - `pm_verify()` - Verify archive integrity
 - `pm_tile()` - Extract a single tile
 
-### Conversion & Creation
+### Creation & Conversion
+- `pm_create()` - Create PMTiles from GeoJSON/sf with tippecanoe
 - `pm_convert()` - Convert MBTiles to/from PMTiles
 - `pm_extract()` - Extract a region or zoom levels
 - `pm_cluster()` - Cluster tiles for cloud upload
@@ -177,13 +178,64 @@ pm_view("https://example.com/tiles.pmtiles")
 
 ## Creating PMTiles
 
-This package focuses on working with existing PMTiles. To create PMTiles from scratch, use:
+### With tippecanoe (Recommended)
 
-- [tippecanoe](https://github.com/felt/tippecanoe) - Create from GeoJSON/FlatGeobuf
-- [go-pmtiles](https://github.com/protomaps/go-pmtiles) CLI - Convert from MBTiles
+The `pm_create()` function provides a comprehensive R wrapper for tippecanoe, allowing you to create PMTiles directly from sf objects or GeoJSON files.
+
+**Note**: You must install tippecanoe separately:
+- macOS: `brew install tippecanoe`
+- Ubuntu: `sudo apt-get install tippecanoe`
+- From source: https://github.com/felt/tippecanoe
+
+```r
+library(sf)
+library(pmtiles)
+
+# Simple: Create from sf object
+my_data <- st_read("data.geojson")
+pm_create(my_data, "output.pmtiles", max_zoom = 14)
+
+# Advanced: High-quality parcel tiles
+pm_create(
+  "parcels.geojson",
+  "parcels.pmtiles",
+  layer_name = "parcels",
+  min_zoom = 10,
+  max_zoom = 18,
+  full_detail = 15,
+  preserve_input_order = TRUE,
+  no_tiny_polygon_reduction = TRUE,
+  coalesce_densest_as_needed = TRUE,
+  coalesce_fraction_as_needed = TRUE,
+  simplification = 1,
+  detect_shared_borders = TRUE,
+  other_options = c("-pf", "-pk", "-ai")
+)
+
+# Point clustering for markers
+pm_create(
+  points_sf,
+  "clustered_points.pmtiles",
+  max_zoom = 14,
+  cluster_distance = 10,
+  cluster_maxzoom = "g",
+  generate_ids = TRUE
+)
+
+# With attribute filtering
+pm_create(
+  roads_sf,
+  "roads.pmtiles",
+  include = c("name", "highway", "surface"),
+  drop_densest_as_needed = TRUE,
+  simplification = 10
+)
+```
+
+### Other Tools
+
+- [go-pmtiles](https://github.com/protomaps/go-pmtiles) CLI - Use `pm_convert()` to convert from MBTiles
 - [planetiler](https://github.com/onthegomap/planetiler) - Create from OSM data
-
-Then use this package's `pm_convert()`, `pm_edit()`, and other functions to work with them in R.
 
 ## Requirements
 

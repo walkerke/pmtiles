@@ -2,6 +2,7 @@
 
 export(pm_cluster)
 export(pm_convert)
+export(pm_create)
 export(pm_edit)
 export(pm_extract)
 export(pm_serve)
