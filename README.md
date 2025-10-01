@@ -89,6 +89,21 @@ maplibre() |>
 # Stop the server when done
 pm_stop_server(port = 8080)
 ```
+`pm_serve()` uses httpuv to serve PMTiles files.  For very large PMTiles files (1GB+), it is recommended to use an alternative method.
+I recommend `http-server` from NodeJS to serve large PMTiles locally:
+
+```
+npm install -g http-server
+
+# In your directory
+http-server -p 8080 --cors
+```
+
+Once served, the URL can be passed to `pm_view()`:
+
+```r
+pm_view("http://localhost:8080/YOUR_TILES.pmtiles", inspect_features = TRUE)
+```
 
 ## Main Functions
 
