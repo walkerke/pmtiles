@@ -1,0 +1,13 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github$
+^inst/go-pmtiles/.*\.go$
+^inst/go-pmtiles/go\.mod$
+^inst/go-pmtiles/go\.sum$
+^inst/go-pmtiles/\.git
+^inst/go-pmtiles/README\.md$
+^inst/go-pmtiles/Dockerfile$
+^inst/go-pmtiles/pmtiles/.*_test\.go$
+^inst/go-pmtiles/pmtiles/fixtures$
+^tools$

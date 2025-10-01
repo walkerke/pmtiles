@@ -1,0 +1,68 @@
+#!/bin/sh
+
+# Detect platform
+OS=$(uname -s)
+ARCH=$(uname -m)
+
+case "$OS" in
+    Linux)   PLATFORM="linux" ;;
+    Darwin)  PLATFORM="darwin" ;;
+    *)       PLATFORM="unknown" ;;
+esac
+
+case "$ARCH" in
+    x86_64)  BINARCH="amd64" ;;
+    aarch64) BINARCH="arm64" ;;
+    arm64)   BINARCH="arm64" ;;
+    *)       BINARCH="unknown" ;;
+esac
+
+BINARY_DIR="inst/bin/${PLATFORM}_${BINARCH}"
+BINARY_PATH="${BINARY_DIR}/pmtiles"
+
+echo "Detected platform: ${PLATFORM}_${BINARCH}"
+
+# Check if pre-compiled binary exists
+if [ -f "${BINARY_PATH}" ]; then
+    echo "Using pre-compiled binary for ${PLATFORM}_${BINARCH}"
+    chmod +x "${BINARY_PATH}"
+    exit 0
+fi
+
+# If no pre-compiled binary, try to build from source
+echo "No pre-compiled binary found for ${PLATFORM}_${BINARCH}"
+
+if ! command -v go >/dev/null 2>&1; then
+    echo "***********************************************************************"
+    echo "Go is not found on your system."
+    echo "Pre-compiled binaries are not available for ${PLATFORM}_${BINARCH}."
+    echo "Please install Go (>= 1.19) to build from source."
+    echo "Visit https://golang.org/doc/install for installation instructions."
+    echo "***********************************************************************"
+    exit 1
+fi
+
+# Build from source
+echo "Building pmtiles binary from source..."
+cd inst/go-pmtiles
+
+# Create binary directory
+mkdir -p ../${BINARY_DIR}
+
+# Build for the current platform
+go build -ldflags="-s -w" -o ../../${BINARY_PATH} main.go
+
+if [ $? -eq 0 ]; then
+    echo "Successfully built pmtiles binary from source"
+    chmod +x "../../${BINARY_PATH}"
+else
+    echo "***********************************************************************"
+    echo "Failed to build pmtiles binary from source"
+    echo "***********************************************************************"
+    exit 1
+fi
+
+cd ../..
+
+echo "Configuration successful"
+exit 0

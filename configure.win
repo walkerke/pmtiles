@@ -1,0 +1,61 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM Detect architecture
+set ARCH=%PROCESSOR_ARCHITECTURE%
+if "%ARCH%"=="AMD64" (
+    set BINARCH=amd64
+) else if "%ARCH%"=="ARM64" (
+    set BINARCH=arm64
+) else (
+    set BINARCH=unknown
+)
+
+set BINARY_DIR=inst\bin\windows_%BINARCH%
+set BINARY_PATH=%BINARY_DIR%\pmtiles.exe
+
+echo Detected platform: windows_%BINARCH%
+
+REM Check if pre-compiled binary exists
+if exist "%BINARY_PATH%" (
+    echo Using pre-compiled binary for windows_%BINARCH%
+    exit /b 0
+)
+
+REM If no pre-compiled binary, try to build from source
+echo No pre-compiled binary found for windows_%BINARCH%
+
+where go >nul 2>nul
+if %errorlevel% neq 0 (
+    echo ***********************************************************************
+    echo Go is not found on your system.
+    echo Pre-compiled binaries are not available for windows_%BINARCH%.
+    echo Please install Go ^(^>= 1.19^) to build from source.
+    echo Visit https://golang.org/doc/install for installation instructions.
+    echo ***********************************************************************
+    exit /b 1
+)
+
+REM Build from source
+echo Building pmtiles binary from source...
+cd inst\go-pmtiles
+
+REM Create binary directory
+if not exist "..\%BINARY_DIR%" mkdir "..\%BINARY_DIR%"
+
+REM Build for Windows
+go build -ldflags="-s -w" -o ..\..\%BINARY_PATH% main.go
+
+if %errorlevel% equ 0 (
+    echo Successfully built pmtiles binary from source
+) else (
+    echo ***********************************************************************
+    echo Failed to build pmtiles binary from source
+    echo ***********************************************************************
+    exit /b 1
+)
+
+cd ..\..
+
+echo Configuration successful
+exit /b 0

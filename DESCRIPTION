@@ -1,0 +1,28 @@
+Package: pmtiles
+Type: Package
+Title: R Interface to PMTiles
+Version: 0.1.0
+Authors@R: c(
+    person("Kyle", "Walker", email = "kyle@walker-data.com", role = c("aut", "cre")),
+    person("Brandon", "Liu", role = "cph", comment = "go-pmtiles library author"),
+    person("Protomaps LLC", role = "cph", comment = "go-pmtiles library copyright holder")
+    )
+Description: Provides R bindings to the PMTiles command-line interface for
+    working with PMTiles archives. PMTiles is a single-file archive format for
+    tiled data that enables efficient cloud-native storage and retrieval of map tiles.
+    This package wraps the go-pmtiles CLI to provide functions for inspecting,
+    extracting, converting, and serving PMTiles archives.
+License: MIT + file LICENSE
+Copyright: Includes go-pmtiles library (BSD-3-Clause), see inst/COPYRIGHTS
+Encoding: UTF-8
+SystemRequirements: Go (>= 1.19) for building the PMTiles binary
+Imports:
+    processx,
+    jsonlite,
+    tools,
+    httpuv
+Suggests:
+    mapgl
+RoxygenNote: 7.3.2
+URL: https://github.com/protomaps/go-pmtiles
+BugReports: https://github.com/protomaps/go-pmtiles/issues
