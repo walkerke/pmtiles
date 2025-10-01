@@ -89,7 +89,7 @@ maplibre() |>
 # Stop the server when done
 pm_stop_server(port = 8080)
 ```
-`pm_serve()` uses httpuv to serve PMTiles files.  For very large PMTiles files (1GB+), it is recommended to use an alternative method.
+`pm_serve()` uses httpuv to serve PMTiles files.  For very large PMTiles files (1GB+), use an alternative method.
 I recommend `http-server` from NodeJS to serve large PMTiles locally:
 
 ```
@@ -199,8 +199,16 @@ The `pm_create()` function provides a comprehensive R wrapper for tippecanoe, al
 
 **Note**: You must install tippecanoe separately:
 - macOS: `brew install tippecanoe`
-- Ubuntu: `sudo apt-get install tippecanoe`
-- From source: https://github.com/felt/tippecanoe
+- Ubuntu (from source):
+
+```
+git clone https://github.com/felt/tippecanoe.git
+cd tippecanoe
+make -j
+make install
+```
+
+Unfortunately, this workflow is not supported for Windows users.
 
 ```r
 library(sf)
