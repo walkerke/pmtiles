@@ -38,8 +38,15 @@ them to be consumed by PMTiles.js in the browser. This is different from
 For a file at `tiles/data.pmtiles`, it will be available at:
 `http://localhost:PORT/data.pmtiles`
 
-Uses the `servr` package to create a simple HTTP server with CORS support.
-When `background = TRUE`, the server runs as a background R process.
+**File size limitations:**
+- Works well for PMTiles files up to a few hundred MB
+- Files larger than ~1-3GB may not work reliably
+- For very large files (multi-GB), use a dedicated static file server:
+  - `http-server -p 8080 --cors` (Node.js: npm install -g http-server)
+  - Or serve from cloud storage (Cloudflare R2, AWS S3, etc.)
+
+The server uses httpuv with custom CORS headers and HTTP range request support.
+When `background = TRUE`, the server runs as a background daemon.
 }
 \examples{
 \dontrun{

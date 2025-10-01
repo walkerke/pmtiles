@@ -20,8 +20,15 @@
 #' For a file at `tiles/data.pmtiles`, it will be available at:
 #' `http://localhost:PORT/data.pmtiles`
 #'
-#' Uses the `servr` package to create a simple HTTP server with CORS support.
-#' When `background = TRUE`, the server runs as a background R process.
+#' **File size limitations:**
+#' - Works well for PMTiles files up to a few hundred MB
+#' - Files larger than ~1-3GB may not work reliably
+#' - For very large files (multi-GB), use a dedicated static file server:
+#'   - `http-server -p 8080 --cors` (Node.js: npm install -g http-server)
+#'   - Or serve from cloud storage (Cloudflare R2, AWS S3, etc.)
+#'
+#' The server uses httpuv with custom CORS headers and HTTP range request support.
+#' When `background = TRUE`, the server runs as a background daemon.
 #'
 #' @return
 #' If `background = TRUE`, returns a list with:
@@ -283,8 +290,12 @@ pm_stop_server <- function(server = NULL) {
     message("Stopping all PMTiles servers...")
     for (server_id in ls(servers)) {
       server_info <- servers[[server_id]]
-      httpuv::stopDaemonizedServer(server_info$handle)
-      message("  Stopped server on port ", server_id)
+      tryCatch({
+        httpuv::stopDaemonizedServer(server_info$handle)
+        message("  Stopped server on port ", server_id)
+      }, error = function(e) {
+        message("  Server on port ", server_id, " already stopped or unavailable")
+      })
       rm(list = server_id, envir = servers)
     }
     return(invisible(TRUE))
@@ -307,8 +318,13 @@ pm_stop_server <- function(server = NULL) {
   }
 
   # Stop the server
-  httpuv::stopDaemonizedServer(server_handle)
-  message("Stopped PMTiles server on port ", port)
+  tryCatch({
+    httpuv::stopDaemonizedServer(server_handle)
+    message("Stopped PMTiles server on port ", port)
+  }, error = function(e) {
+    message("Server on port ", port, " already stopped or unavailable")
+  })
+
   if (exists(port, envir = servers)) {
     rm(list = port, envir = servers)
   }
