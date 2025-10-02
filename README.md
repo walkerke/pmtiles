@@ -6,7 +6,13 @@ PMTiles is a single-file archive format for tiled map data. This package provide
 
 ## Installation
 
-Install from GitHub:
+Install from R-Universe:
+
+```r
+install.packages('pmtiles', repos = c('https://walkerke.r-universe.dev', 'https://cloud.r-project.org'))
+```
+
+Or, install from GitHub:
 
 ```r
 # Using pak (recommended)
