@@ -32,18 +32,14 @@ stopped with `pm_stop_server()`.
 }
 \details{
 This function serves the **raw PMTiles files** with CORS headers, allowing
-them to be consumed by PMTiles.js in the browser. This is different from
-`pmtiles serve` which provides a Z/X/Y tile API.
+them to be consumed by PMTiles.js in the browser. This works with mapgl's
+PMTiles protocol and `pm_view()` for quick visualization.
 
 For a file at `tiles/data.pmtiles`, it will be available at:
 `http://localhost:PORT/data.pmtiles`
 
-**File size limitations:**
-- Works well for PMTiles files up to a few hundred MB
-- Files larger than ~1-3GB may not work reliably
-- For very large files (multi-GB), use a dedicated static file server:
-  - `http-server -p 8080 --cors` (Node.js: npm install -g http-server)
-  - Or serve from cloud storage (Cloudflare R2, AWS S3, etc.)
+**File size:** Works well for files up to ~1GB. For larger files, consider
+`pm_serve_zxy()` or serving from a Node.js server like http-server.
 
 The server uses httpuv with custom CORS headers and HTTP range request support.
 When `background = TRUE`, the server runs as a background daemon.

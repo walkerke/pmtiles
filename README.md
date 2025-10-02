@@ -69,13 +69,16 @@ pm_view(
 
 ### Serve PMTiles locally
 
-```r
-# Start a local server with CORS support
-pm_serve("path/to/file.pmtiles", port = 8080)
+#### Two approaches to serving PMTiles
 
-# Use with mapgl
+**pm_serve()** - Serves raw .pmtiles files for PMTiles.js clients
+
+```r
+pm_serve("file.pmtiles", port = 8080)
+
+# Simple usage with mapgl's PMTiles protocol
 library(mapgl)
-maplibre() |>
+mapboxgl() |>
   add_pmtiles_source(
     id = "tiles",
     url = "http://localhost:8080/file.pmtiles"
@@ -86,22 +89,61 @@ maplibre() |>
     source_layer = "layer_name"
   )
 
+# Or use with pm_view() for quick visualization
+pm_view("http://localhost:8080/file.pmtiles")
+
 # Stop the server when done
 pm_stop_server(port = 8080)
 ```
-`pm_serve()` uses httpuv to serve PMTiles files.  For very large PMTiles files (1GB+), use an alternative method.
-I recommend `http-server` from NodeJS to serve large PMTiles locally:
 
-```
-npm install -g http-server
-
-# In your directory
-http-server -p 8080 --cors
-```
-
-Once served, the URL can be passed to `pm_view()`:
+**pm_serve_zxy()** - Serves Z/X/Y tile endpoints
 
 ```r
+pm_serve_zxy("~/pmtiles/directory")
+
+# Use with standard tile URLs
+mapboxgl() |>
+  add_vector_source(
+    id = "tiles",
+    tiles = "http://localhost:8080/file/{z}/{x}/{y}.mvt"
+  ) |>
+  add_fill_layer(
+    id = "layer",
+    source = "tiles",
+    source_layer = "layer_name"
+  )
+
+# Serve from cloud storage without downloading
+pm_serve_zxy(
+  bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto",
+  public_url = "http://localhost:8080"
+)
+
+# Run in background
+server <- pm_serve_zxy(background = TRUE)
+pm_stop_server(server)
+```
+
+#### When to use each approach
+
+**Use `pm_serve()`:**
+- Quick local preview with `pm_view()`
+- Simpler setup with PMTiles protocol
+- Files up to ~1GB typically work well
+
+**Use `pm_serve_zxy()`:**
+- Large files (multi-GB) that need reliable serving
+- Serving from cloud storage (S3/R2) without downloading
+- Compatibility with non-PMTiles.js clients
+
+**For very large files locally:**
+Both approaches may have limitations. Consider:
+- Using `pm_serve_zxy()` which handles large files more reliably
+- Using Node's http-server: `http-server -p 8080 --cors` with `pm_view()`
+- Uploading to cloud storage and serving remotely
+
+```r
+# Example with Node's http-server
 pm_view("http://localhost:8080/YOUR_TILES.pmtiles", inspect_features = TRUE)
 ```
 
@@ -123,9 +165,10 @@ pm_view("http://localhost:8080/YOUR_TILES.pmtiles", inspect_features = TRUE)
 - `pm_edit()` - Modify archive metadata
 
 ### Serving & Visualization
-- `pm_serve()` - Start local HTTP server with CORS
+- `pm_serve()` - Start local HTTP server with CORS (serves raw .pmtiles files)
+- `pm_serve_zxy()` - Serve Z/X/Y tile endpoints (works with any map client)
 - `pm_view()` - Quick interactive visualization
-- `pm_stop_server()` - Stop a running server
+- `pm_stop_server()` - Stop any running PMTiles server (by port or server object)
 
 ### Utilities
 - `pm_version()` - Show PMTiles CLI version

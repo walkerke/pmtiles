@@ -123,8 +123,8 @@
 #' }
 #'
 #' The function handles sf objects by converting them to temporary GeoJSON files.
-#' For large datasets, consider writing to GeoJSON first and passing the file
-#' path for better performance.
+#' For faster GeoJSON writing with large datasets, install the \code{yyjsonr}
+#' package, which can be significantly faster than the default \code{sf::st_write()}.
 #'
 #' @examples
 #' \dontrun{
@@ -274,6 +274,9 @@ pm_create <- function(
     }
 
     # Transform to WGS84
+    if (!quiet) {
+      message("Converting sf object to GeoJSON...")
+    }
     input <- sf::st_transform(input, 4326)
 
     # Create temp file
@@ -286,7 +289,21 @@ pm_create <- function(
       temp_file <- tempfile(fileext = ".geojson")
     }
 
-    sf::st_write(input, temp_file, quiet = TRUE, delete_dsn = TRUE)
+    # Use yyjsonr if available for faster GeoJSON writing
+    use_yyjsonr <- requireNamespace("yyjsonr", quietly = TRUE)
+
+    if (use_yyjsonr) {
+      if (!quiet) {
+        message("  Writing GeoJSON with yyjsonr (fast)...")
+      }
+      yyjsonr::write_geojson_file(input, temp_file)
+    } else {
+      if (!quiet) {
+        message("  Writing GeoJSON with sf (install 'yyjsonr' for faster writing)...")
+      }
+      sf::st_write(input, temp_file, quiet = TRUE, delete_dsn = TRUE)
+    }
+
     input_path <- temp_file
 
     # Generate layer name if not provided

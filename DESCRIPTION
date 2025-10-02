@@ -2,6 +2,7 @@ Package: pmtiles
 Type: Package
 Title: R Interface to PMTiles
 Version: 0.1.0
+Date: 2025-10-02
 Authors@R: c(
     person("Kyle", "Walker", email = "kyle@walker-data.com", role = c("aut", "cre")),
     person("Brandon", "Liu", role = "cph", comment = "go-pmtiles library author"),
@@ -15,7 +16,7 @@ Description: Provides R bindings to the PMTiles command-line interface for
 License: MIT + file LICENSE
 Copyright: Includes go-pmtiles library (BSD-3-Clause), see inst/COPYRIGHTS
 Encoding: UTF-8
-SystemRequirements: Go (>= 1.19) for building the PMTiles binary
+SystemRequirements: tippecanoe (optional, for pm_create())
 Imports:
     processx,
     jsonlite,
@@ -24,7 +25,8 @@ Imports:
     stringi
 Suggests:
     mapgl,
-    sf
+    sf,
+    yyjsonr
 RoxygenNote: 7.3.2
-URL: https://github.com/protomaps/go-pmtiles
-BugReports: https://github.com/protomaps/go-pmtiles/issues
+URL: https://github.com/walkerke/pmtiles
+BugReports: https://github.com/walkerke/pmtiles/issues

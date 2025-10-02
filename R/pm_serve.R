@@ -14,18 +14,14 @@
 #'
 #' @details
 #' This function serves the **raw PMTiles files** with CORS headers, allowing
-#' them to be consumed by PMTiles.js in the browser. This is different from
-#' `pmtiles serve` which provides a Z/X/Y tile API.
+#' them to be consumed by PMTiles.js in the browser. This works with mapgl's
+#' PMTiles protocol and `pm_view()` for quick visualization.
 #'
 #' For a file at `tiles/data.pmtiles`, it will be available at:
 #' `http://localhost:PORT/data.pmtiles`
 #'
-#' **File size limitations:**
-#' - Works well for PMTiles files up to a few hundred MB
-#' - Files larger than ~1-3GB may not work reliably
-#' - For very large files (multi-GB), use a dedicated static file server:
-#'   - `http-server -p 8080 --cors` (Node.js: npm install -g http-server)
-#'   - Or serve from cloud storage (Cloudflare R2, AWS S3, etc.)
+#' **File size:** Works well for files up to ~1GB. For larger files, consider
+#' `pm_serve_zxy()` or serving from a Node.js server like http-server.
 #'
 #' The server uses httpuv with custom CORS headers and HTTP range request support.
 #' When `background = TRUE`, the server runs as a background daemon.
@@ -248,20 +244,21 @@ pm_serve <- function(path,
 #' Stop a background PMTiles server
 #'
 #' @description
-#' Stop a PMTiles server that was started with `pm_serve(..., background = TRUE)`.
+#' Stop a PMTiles server that was started with `pm_serve()` or `pm_serve_zxy()`.
 #'
-#' @param server A server object returned by `pm_serve()`, or a port number.
-#'   If `NULL`, stops all running PMTiles servers.
+#' @param server A server object returned by `pm_serve()` or `pm_serve_zxy()`,
+#'   or a port number. If `NULL`, stops all running PMTiles servers.
 #'
 #' @return Invisibly returns `TRUE` if server was stopped, `FALSE` otherwise.
 #'
 #' @examples
 #' \dontrun{
-#' # Start server
-#' server <- pm_serve("data.pmtiles")
+#' # Start servers
+#' server1 <- pm_serve("data.pmtiles")
+#' server2 <- pm_serve_zxy(background = TRUE)
 #'
-#' # Stop it
-#' pm_stop_server(server)
+#' # Stop specific server
+#' pm_stop_server(server1)
 #'
 #' # Or stop by port
 #' pm_stop_server(8080)
@@ -270,63 +267,154 @@ pm_serve <- function(path,
 #' pm_stop_server()
 #' }
 #'
-#' @seealso [pm_serve()]
+#' @seealso [pm_serve()], [pm_serve_zxy()]
 #' @export
 pm_stop_server <- function(server = NULL) {
-  if (!exists(".pmtiles_servers", envir = .GlobalEnv)) {
+  # Check for httpuv servers
+  httpuv_exists <- exists(".pmtiles_servers", envir = .GlobalEnv)
+  # Check for processx (zxy) servers
+  zxy_exists <- exists("zxy_servers", envir = .GlobalEnv)
+
+  if (!httpuv_exists && !zxy_exists) {
     message("No PMTiles servers are running")
     return(invisible(FALSE))
   }
 
-  servers <- get(".pmtiles_servers", envir = .GlobalEnv)
-
+  # If server is NULL, stop all servers of both types
   if (is.null(server)) {
-    # Stop all servers
-    if (length(ls(servers)) == 0) {
-      message("No PMTiles servers are running")
-      return(invisible(FALSE))
+    stopped_any <- FALSE
+
+    # Stop all httpuv servers
+    if (httpuv_exists) {
+      servers <- get(".pmtiles_servers", envir = .GlobalEnv)
+      if (length(ls(servers)) > 0) {
+        message("Stopping all PMTiles servers...")
+        for (server_id in ls(servers)) {
+          server_info <- servers[[server_id]]
+          tryCatch({
+            httpuv::stopDaemonizedServer(server_info$handle)
+            message("  Stopped httpuv server on port ", server_id)
+            stopped_any <- TRUE
+          }, error = function(e) {
+            message("  Server on port ", server_id, " already stopped or unavailable")
+          })
+          rm(list = server_id, envir = servers)
+        }
+      }
     }
 
-    message("Stopping all PMTiles servers...")
-    for (server_id in ls(servers)) {
-      server_info <- servers[[server_id]]
-      tryCatch({
-        httpuv::stopDaemonizedServer(server_info$handle)
-        message("  Stopped server on port ", server_id)
-      }, error = function(e) {
-        message("  Server on port ", server_id, " already stopped or unavailable")
-      })
-      rm(list = server_id, envir = servers)
+    # Stop all zxy servers
+    if (zxy_exists) {
+      zxy_servers <- get("zxy_servers", envir = .GlobalEnv)
+      if (length(ls(zxy_servers)) > 0) {
+        if (!stopped_any) {
+          message("Stopping all PMTiles servers...")
+        }
+        for (port in ls(zxy_servers)) {
+          proc <- zxy_servers[[port]]
+          tryCatch({
+            if (proc$is_alive()) {
+              proc$kill()
+              message("  Stopped Z/X/Y server on port ", port)
+              stopped_any <- TRUE
+            }
+          }, error = function(e) {
+            message("  Error stopping server on port ", port)
+          })
+          rm(list = port, envir = zxy_servers)
+        }
+      }
+    }
+
+    if (!stopped_any) {
+      message("No PMTiles servers are running")
+      return(invisible(FALSE))
     }
     return(invisible(TRUE))
   }
 
-  # Extract port and handle from server object or use directly
+  # If server is a processx object (from pm_serve_zxy)
+  if (inherits(server, "process")) {
+    tryCatch({
+      if (server$is_alive()) {
+        server$kill()
+        message("Stopped Z/X/Y server")
+      } else {
+        message("Server already stopped")
+      }
+    }, error = function(e) {
+      message("Error stopping server: ", e$message)
+    })
+    return(invisible(TRUE))
+  }
+
+  # If server is a list with port (from pm_serve)
   if (is.list(server) && !is.null(server$port)) {
     port <- as.character(server$port)
     server_handle <- server$handle
-  } else if (is.numeric(server)) {
+
+    tryCatch({
+      httpuv::stopDaemonizedServer(server_handle)
+      message("Stopped httpuv server on port ", port)
+    }, error = function(e) {
+      message("Server on port ", port, " already stopped or unavailable")
+    })
+
+    if (httpuv_exists) {
+      servers <- get(".pmtiles_servers", envir = .GlobalEnv)
+      if (exists(port, envir = servers)) {
+        rm(list = port, envir = servers)
+      }
+    }
+    return(invisible(TRUE))
+  }
+
+  # If server is a port number, try both types
+  if (is.numeric(server)) {
     port <- as.character(server)
-    if (!exists(port, envir = servers)) {
+    stopped <- FALSE
+
+    # Try httpuv first
+    if (httpuv_exists) {
+      servers <- get(".pmtiles_servers", envir = .GlobalEnv)
+      if (exists(port, envir = servers)) {
+        server_info <- servers[[port]]
+        tryCatch({
+          httpuv::stopDaemonizedServer(server_info$handle)
+          message("Stopped httpuv server on port ", port)
+          stopped <- TRUE
+        }, error = function(e) {
+          message("Server on port ", port, " already stopped or unavailable")
+        })
+        rm(list = port, envir = servers)
+        return(invisible(TRUE))
+      }
+    }
+
+    # Try zxy/processx
+    if (zxy_exists) {
+      zxy_servers <- get("zxy_servers", envir = .GlobalEnv)
+      if (exists(port, envir = zxy_servers)) {
+        proc <- zxy_servers[[port]]
+        tryCatch({
+          if (proc$is_alive()) {
+            proc$kill()
+            message("Stopped Z/X/Y server on port ", port)
+            stopped <- TRUE
+          }
+        }, error = function(e) {
+          message("Error stopping server on port ", port)
+        })
+        rm(list = port, envir = zxy_servers)
+        return(invisible(TRUE))
+      }
+    }
+
+    if (!stopped) {
       message("No server found on port ", port)
       return(invisible(FALSE))
     }
-    server_info <- servers[[port]]
-    server_handle <- server_info$handle
-  } else {
-    stop("Invalid server argument. Expected server object or port number.", call. = FALSE)
   }
 
-  # Stop the server
-  tryCatch({
-    httpuv::stopDaemonizedServer(server_handle)
-    message("Stopped PMTiles server on port ", port)
-  }, error = function(e) {
-    message("Server on port ", port, " already stopped or unavailable")
-  })
-
-  if (exists(port, envir = servers)) {
-    rm(list = port, envir = servers)
-  }
-  return(invisible(TRUE))
+  stop("Invalid server argument. Expected server object or port number.", call. = FALSE)
 }

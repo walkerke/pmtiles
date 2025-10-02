@@ -213,8 +213,8 @@ installed separately:
 }
 
 The function handles sf objects by converting them to temporary GeoJSON files.
-For large datasets, consider writing to GeoJSON first and passing the file
-path for better performance.
+For faster GeoJSON writing with large datasets, install the \code{yyjsonr}
+package, which can be significantly faster than the default \code{sf::st_write()}.
 }
 \section{Zoom Levels}{
 

@@ -7,22 +7,23 @@
 pm_stop_server(server = NULL)
 }
 \arguments{
-\item{server}{A server object returned by `pm_serve()`, or a port number.
-If `NULL`, stops all running PMTiles servers.}
+\item{server}{A server object returned by `pm_serve()` or `pm_serve_zxy()`,
+or a port number. If `NULL`, stops all running PMTiles servers.}
 }
 \value{
 Invisibly returns `TRUE` if server was stopped, `FALSE` otherwise.
 }
 \description{
-Stop a PMTiles server that was started with `pm_serve(..., background = TRUE)`.
+Stop a PMTiles server that was started with `pm_serve()` or `pm_serve_zxy()`.
 }
 \examples{
 \dontrun{
-# Start server
-server <- pm_serve("data.pmtiles")
+# Start servers
+server1 <- pm_serve("data.pmtiles")
+server2 <- pm_serve_zxy(background = TRUE)
 
-# Stop it
-pm_stop_server(server)
+# Stop specific server
+pm_stop_server(server1)
 
 # Or stop by port
 pm_stop_server(8080)
@@ -33,5 +34,5 @@ pm_stop_server()
 
 }
 \seealso{
-[pm_serve()]
+[pm_serve()], [pm_serve_zxy()]
 }

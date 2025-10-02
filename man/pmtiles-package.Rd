@@ -62,8 +62,8 @@ PMTiles specification: \url{https://github.com/protomaps/PMTiles}
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/protomaps/go-pmtiles}
-  \item Report bugs at \url{https://github.com/protomaps/go-pmtiles/issues}
+  \item \url{https://github.com/walkerke/pmtiles}
+  \item Report bugs at \url{https://github.com/walkerke/pmtiles/issues}
 }
 
 }
