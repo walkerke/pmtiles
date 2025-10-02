@@ -1,61 +1,75 @@
-@echo off
-setlocal enabledelayedexpansion
+#!/bin/sh
 
-REM Detect architecture
-set ARCH=%PROCESSOR_ARCHITECTURE%
-if "%ARCH%"=="AMD64" (
-    set BINARCH=amd64
-) else if "%ARCH%"=="ARM64" (
-    set BINARCH=arm64
-) else (
-    set BINARCH=unknown
-)
+# Detect architecture
+if [ -z "$R_ARCH" ]; then
+  # Try to detect from PROCESSOR_ARCHITECTURE or uname
+  if [ ! -z "$PROCESSOR_ARCHITECTURE" ]; then
+    ARCH="$PROCESSOR_ARCHITECTURE"
+  else
+    ARCH=$(uname -m)
+  fi
+else
+  # R_ARCH is set (e.g., /x64 or /i386)
+  ARCH="$R_ARCH"
+fi
 
-set BINARY_DIR=inst\bin\windows_%BINARCH%
-set BINARY_PATH=%BINARY_DIR%\pmtiles.exe
+# Map to binary architecture
+case "$ARCH" in
+  *64*|*amd64*|*x86_64*|AMD64)
+    BINARCH="amd64"
+    ;;
+  *arm64*|*aarch64*|ARM64)
+    BINARCH="arm64"
+    ;;
+  *)
+    BINARCH="amd64"  # Default to amd64
+    ;;
+esac
 
-echo Detected platform: windows_%BINARCH%
+BINARY_DIR="inst/bin/windows_${BINARCH}"
+BINARY_PATH="${BINARY_DIR}/pmtiles.exe"
 
-REM Check if pre-compiled binary exists
-if exist "%BINARY_PATH%" (
-    echo Using pre-compiled binary for windows_%BINARCH%
-    exit /b 0
-)
+echo "Detected platform: windows_${BINARCH}"
 
-REM If no pre-compiled binary, try to build from source
-echo No pre-compiled binary found for windows_%BINARCH%
+# Check if pre-compiled binary exists
+if [ -f "$BINARY_PATH" ]; then
+  echo "Using pre-compiled binary for windows_${BINARCH}"
+  exit 0
+fi
 
-where go >nul 2>nul
-if %errorlevel% neq 0 (
-    echo ***********************************************************************
-    echo Go is not found on your system.
-    echo Pre-compiled binaries are not available for windows_%BINARCH%.
-    echo Please install Go ^(^>= 1.19^) to build from source.
-    echo Visit https://golang.org/doc/install for installation instructions.
-    echo ***********************************************************************
-    exit /b 1
-)
+# If no pre-compiled binary, try to build from source
+echo "No pre-compiled binary found for windows_${BINARCH}"
 
-REM Build from source
-echo Building pmtiles binary from source...
-cd inst\go-pmtiles
+if ! command -v go >/dev/null 2>&1; then
+  echo "***********************************************************************"
+  echo "Go is not found on your system."
+  echo "Pre-compiled binaries are not available for windows_${BINARCH}."
+  echo "Please install Go (>= 1.19) to build from source."
+  echo "Visit https://golang.org/doc/install for installation instructions."
+  echo "***********************************************************************"
+  exit 1
+fi
 
-REM Create binary directory
-if not exist "..\%BINARY_DIR%" mkdir "..\%BINARY_DIR%"
+# Build from source
+echo "Building pmtiles binary from source..."
+cd inst/go-pmtiles || exit 1
 
-REM Build for Windows
-go build -ldflags="-s -w" -o ..\..\%BINARY_PATH% main.go
+# Create binary directory
+mkdir -p "../${BINARY_DIR}"
 
-if %errorlevel% equ 0 (
-    echo Successfully built pmtiles binary from source
-) else (
-    echo ***********************************************************************
-    echo Failed to build pmtiles binary from source
-    echo ***********************************************************************
-    exit /b 1
-)
+# Build for Windows
+GOOS=windows GOARCH="${BINARCH}" go build -ldflags="-s -w" -o "../../${BINARY_PATH}" main.go
 
-cd ..\..
+if [ $? -eq 0 ]; then
+  echo "Successfully built pmtiles binary from source"
+else
+  echo "***********************************************************************"
+  echo "Failed to build pmtiles binary from source"
+  echo "***********************************************************************"
+  exit 1
+fi
 
-echo Configuration successful
-exit /b 0
+cd ../..
+
+echo "Configuration successful"
+exit 0
