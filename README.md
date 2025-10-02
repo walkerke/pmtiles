@@ -1,4 +1,4 @@
-# pmtiles <img src="man/figures/logo.png" align="right" width="150" />
+# pmtiles <img src="man/figures/logo1.png" align="right" width="250" />
 
 > R wrapper for the [pmtiles](https://github.com/protomaps/go-pmtiles) command-line tool
 
