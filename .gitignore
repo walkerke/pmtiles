@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 inst/go-pmtiles
+.DS_Store
