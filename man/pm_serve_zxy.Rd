@@ -41,7 +41,7 @@ If `background = FALSE`, blocks until server is stopped (Ctrl+C).
 }
 \description{
 Start a local tile server that serves PMTiles archives as standard Z/X/Y tile
-endpoints (e.g., `/{tileset}/{z}/{x}/{y}.mvt`). This uses the native
+endpoints (e.g., `/\{tileset\}/\{z\}/\{x\}/\{y\}.mvt`). This uses the native
 `pmtiles serve` command and works with any map client, not just PMTiles.js.
 
 Unlike `pm_serve()` which serves raw .pmtiles files for direct consumption by
@@ -53,7 +53,7 @@ accessible to any mapping library that supports standard tile URLs.
 
 The server provides these endpoints:
 
-- **Tiles**: `http://localhost:PORT/TILESET/{z}/{x}/{y}.ext`
+- **Tiles**: `http://localhost:PORT/TILESET/\{z\}/\{x\}/\{y\}.ext`
   - Extension (`.mvt`, `.png`, `.jpg`, etc.) is auto-detected from PMTiles metadata
 - **TileJSON**: `http://localhost:PORT/TILESET.json` (requires `public_url`)
   - Returns TileJSON metadata for the tileset
