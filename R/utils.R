@@ -20,9 +20,9 @@ pmtiles_binary <- function() {
   }
 
   # Map architecture names
-  if (arch %in% c("x86_64", "amd64")) {
+  if (arch %in% c("x86_64", "x86-64", "amd64", "AMD64")) {
     binarch <- "amd64"
-  } else if (arch %in% c("aarch64", "arm64")) {
+  } else if (arch %in% c("aarch64", "arm64", "ARM64")) {
     binarch <- "arm64"
   } else {
     stop("Unsupported architecture: ", arch, call. = FALSE)
