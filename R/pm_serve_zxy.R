@@ -110,11 +110,32 @@ pm_serve_zxy <- function(path = ".",
 
   # Add path or bucket
   if (!is.null(bucket)) {
-    args <- c(args, paste0("--bucket=", bucket))
+    # Bucket specified explicitly
+    args <- c(args, path, paste0("--bucket=", bucket))
   } else {
-    # Expand ~ and normalize path
-    path <- normalizePath(path.expand(path), mustWork = FALSE)
-    args <- c(args, path)
+    # Check if path is a URL
+    if (grepl("^https?://", path)) {
+      # Parse URL to extract base and path
+      # Extract everything up to the last /
+      url_parts <- regmatches(path, regexpr("^(https?://[^/]+)(/.*)$", path, perl = TRUE))
+      if (length(url_parts) == 0) {
+        # Just a domain, no path
+        args <- c(args, "/", paste0("--bucket=", path))
+      } else {
+        # Extract base URL and path
+        base_url <- sub("^(https?://[^/]+).*$", "\\1", path)
+        url_path <- sub("^https?://[^/]+(.*)$", "\\1", path)
+        # Remove .pmtiles extension from path for serving
+        url_path <- dirname(url_path)
+        if (url_path == ".") url_path <- "/"
+
+        args <- c(args, url_path, paste0("--bucket=", base_url))
+      }
+    } else {
+      # It's a local path - expand ~ and normalize
+      path <- normalizePath(path.expand(path), mustWork = FALSE)
+      args <- c(args, path)
+    }
   }
 
   # Add port
