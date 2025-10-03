@@ -234,8 +234,10 @@ pm_view <- function(
       )
     }
 
-    # Extract attribute names from tilestats to build popup
+    # Extract attribute names from tilestats or vector_layers to build popup
     attr_names <- NULL
+
+    # Try tilestats first (tippecanoe format)
     if (
       !is.null(metadata$tilestats$layers) &&
         length(metadata$tilestats$layers) >= layer_index
@@ -246,6 +248,15 @@ pm_view <- function(
       ) {
         # Extract the attribute names from the list structure
         attr_names <- sapply(layer_stats$attributes, function(x) x$attribute)
+      }
+    }
+
+    # Fallback to vector_layers.fields (e.g., Overture Maps, Planetiler format)
+    if (is.null(attr_names) && !is.null(metadata$vector_layers) &&
+        length(metadata$vector_layers) >= layer_index) {
+      vector_layer <- metadata$vector_layers[[layer_index]]
+      if (!is.null(vector_layer$fields)) {
+        attr_names <- names(vector_layer$fields)
       }
     }
 
