@@ -173,7 +173,7 @@ pm_serve_zxy <- function(path = ".",
 
   if (background) {
     # Run in background with processx
-    message("  Running in background mode (use pm_stop_serve_zxy() to stop)")
+    message("  Running in background mode (use pm_stop_server() to stop)")
 
     proc <- processx::process$new(
       command = pmtiles_path,

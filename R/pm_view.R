@@ -156,8 +156,30 @@ pm_view <- function(
 
   # Determine geometry type for auto layer type
   if (layer_type == "auto") {
-    if (!is.null(metadata$tilestats$layers)) {
-      geom_type <- metadata$tilestats$layers[[1]]$geometry
+    geom_type <- NULL
+
+    # Try tilestats first (tippecanoe format)
+    if (!is.null(metadata$tilestats$layers) && length(metadata$tilestats$layers) >= layer_index) {
+      geom_type <- metadata$tilestats$layers[[layer_index]]$geometry
+    }
+
+    # Fallback to vector_layers (Planetiler/Overture format)
+    # Infer from layer name or fields
+    if (is.null(geom_type) && !is.null(metadata$vector_layers) &&
+        length(metadata$vector_layers) >= layer_index) {
+      layer_id <- metadata$vector_layers[[layer_index]]$id
+      # Common patterns for geometry inference
+      if (grepl("point|poi|place", layer_id, ignore.case = TRUE)) {
+        geom_type <- "Point"
+      } else if (grepl("line|road|street|path|route", layer_id, ignore.case = TRUE)) {
+        geom_type <- "LineString"
+      } else if (grepl("polygon|building|parcel|boundary|area", layer_id, ignore.case = TRUE)) {
+        geom_type <- "Polygon"
+      }
+    }
+
+    # Map geometry type to layer type
+    if (!is.null(geom_type)) {
       layer_type <- switch(
         geom_type,
         "Polygon" = "fill",
