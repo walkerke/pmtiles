@@ -277,7 +277,11 @@ pm_create <- function(
     if (!quiet) {
       message("Converting sf object to GeoJSON...")
     }
-    input <- sf::st_transform(input, 4326)
+
+    # Check if the input is already in WGS84 - no need to transform otherwise
+    if (!sf::st_crs(input) == 4326) {
+      input <- sf::st_transform(input, 4326)
+    }
 
     # Create temp file
     if (keep_geojson) {
@@ -299,7 +303,9 @@ pm_create <- function(
       yyjsonr::write_geojson_file(input, temp_file)
     } else {
       if (!quiet) {
-        message("  Writing GeoJSON with sf (install 'yyjsonr' for faster writing)...")
+        message(
+          "  Writing GeoJSON with sf (install 'yyjsonr' for faster writing)..."
+        )
       }
       sf::st_write(input, temp_file, quiet = TRUE, delete_dsn = TRUE)
     }
