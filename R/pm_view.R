@@ -1,11 +1,11 @@
 #' Quick viewer for PMTiles archives
 #'
 #' @description
-#' Quickly visualize a PMTiles archive on an interactive map using mapgl.
+#' Quickly visualize a PMTiles archive or TileJSON endpoint on an interactive map using mapgl.
 #' Automatically detects the tile type and applies appropriate styling.
 #' For local files, automatically starts a background server.
 #'
-#' @param input Path to a local PMTiles file or URL to a remote archive.
+#' @param input Path to a local PMTiles file, URL to a remote archive, or TileJSON endpoint URL.
 #' @param source_layer Name of the source layer to display. If `NULL` (default),
 #'   automatically uses the first layer found in the metadata.
 #' @param style Base map style. Can be a mapgl style function like
@@ -39,6 +39,10 @@
 #' **Remote files**: If `input` is a URL (starts with `http://` or `https://`),
 #' uses the URL directly without starting a local server.
 #'
+#' **TileJSON endpoints**: If `input` ends with `.json`, it's treated as a TileJSON
+#' endpoint. The function fetches the TileJSON metadata and uses `add_vector_source()`
+#' to display the tiles.
+#'
 #' # Geometry Detection
 #'
 #' When `layer_type = "auto"`, the function inspects the metadata to determine
@@ -59,6 +63,9 @@
 #'
 #' # View remote PMTiles
 #' pm_view("https://example.com/tiles.pmtiles")
+#'
+#' # View TileJSON endpoint
+#' pm_view("http://localhost:8080/tiles.json")
 #'
 #' # Use specific source layer
 #' pm_view("data.pmtiles", source_layer = "buildings")
@@ -95,10 +102,27 @@ pm_view <- function(
     )
   }
 
-  # Determine if input is local or remote
+  # Determine input type: TileJSON, remote PMTiles, or local PMTiles
   is_remote <- grepl("^https?://", input)
+  is_tilejson <- grepl("\\.json$", input, ignore.case = TRUE)
 
-  if (is_remote) {
+  if (is_tilejson) {
+    # TileJSON endpoint - fetch and parse directly
+    tilejson_url <- input
+    message("Loading TileJSON: ", input)
+
+    # Check if jsonlite is available
+    if (!requireNamespace("jsonlite", quietly = TRUE)) {
+      stop(
+        "Package 'jsonlite' is required for TileJSON support.\n",
+        "Install it with: install.packages('jsonlite')",
+        call. = FALSE
+      )
+    }
+
+    # Fetch and parse TileJSON
+    metadata <- jsonlite::fromJSON(input)
+  } else if (is_remote) {
     # Remote file - use URL directly
     pmtiles_url <- input
     message("Loading remote PMTiles: ", input)
@@ -206,17 +230,26 @@ pm_view <- function(
   # Get bounds and zoom info for initial view
   bounds <- NULL
   if (!is.null(metadata$antimeridian_adjusted_bounds)) {
+    # PMTiles metadata format (comma-separated string)
     bounds_str <- strsplit(metadata$antimeridian_adjusted_bounds, ",")[[1]]
     bounds <- as.numeric(bounds_str)
+  } else if (!is.null(metadata$bounds)) {
+    # TileJSON format (array)
+    bounds <- metadata$bounds
   }
 
   # Get min/max zoom from the specific layer we're displaying
   minzoom <- NULL
   maxzoom <- NULL
-  if (
+  if (is_tilejson) {
+    # TileJSON has zoom levels at the top level
+    minzoom <- metadata$minzoom
+    maxzoom <- metadata$maxzoom
+  } else if (
     !is.null(metadata$vector_layers) &&
       length(metadata$vector_layers) >= layer_index
   ) {
+    # PMTiles metadata has zoom levels per layer
     layer_metadata <- metadata$vector_layers[[layer_index]]
     minzoom <- layer_metadata$minzoom
     maxzoom <- layer_metadata$maxzoom
@@ -234,12 +267,22 @@ pm_view <- function(
   ) |>
     mapgl::set_projection("globe")
 
-  # Add PMTiles source
-  map <- mapgl::add_pmtiles_source(
-    map,
-    id = "pmtiles",
-    url = pmtiles_url
-  )
+  # Add source (PMTiles or TileJSON)
+  if (is_tilejson) {
+    # Use add_vector_source for TileJSON
+    map <- mapgl::add_vector_source(
+      map,
+      id = "pmtiles",
+      url = tilejson_url
+    )
+  } else {
+    # Use add_pmtiles_source for PMTiles
+    map <- mapgl::add_pmtiles_source(
+      map,
+      id = "pmtiles",
+      url = pmtiles_url
+    )
+  }
 
   # Build hover_options and popup if inspect_features is TRUE
   hover_opts <- NULL
