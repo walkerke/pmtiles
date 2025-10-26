@@ -21,7 +21,7 @@ pm_view(
 )
 }
 \arguments{
-\item{input}{Path to a local PMTiles file or URL to a remote archive.}
+\item{input}{Path to a local PMTiles file, URL to a remote archive, or TileJSON endpoint URL.}
 
 \item{source_layer}{Name of the source layer to display. If `NULL` (default),
 automatically uses the first layer found in the metadata.}
@@ -55,7 +55,7 @@ feature attributes. Default is `FALSE`.}
 A mapgl map object.
 }
 \description{
-Quickly visualize a PMTiles archive on an interactive map using mapgl.
+Quickly visualize a PMTiles archive or TileJSON endpoint on an interactive map using mapgl.
 Automatically detects the tile type and applies appropriate styling.
 For local files, automatically starts a background server.
 }
@@ -72,6 +72,10 @@ R session ends. You can manually stop it with `pm_stop_server()`.
 
 **Remote files**: If `input` is a URL (starts with `http://` or `https://`),
 uses the URL directly without starting a local server.
+
+**TileJSON endpoints**: If `input` ends with `.json`, it's treated as a TileJSON
+endpoint. The function fetches the TileJSON metadata and uses `add_vector_source()`
+to display the tiles.
 
 # Geometry Detection
 
@@ -93,6 +97,9 @@ pm_view("data.pmtiles",
 
 # View remote PMTiles
 pm_view("https://example.com/tiles.pmtiles")
+
+# View TileJSON endpoint
+pm_view("http://localhost:8080/tiles.json")
 
 # Use specific source layer
 pm_view("data.pmtiles", source_layer = "buildings")

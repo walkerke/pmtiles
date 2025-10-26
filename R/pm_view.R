@@ -1,11 +1,11 @@
 #' Quick viewer for PMTiles archives
 #'
 #' @description
-#' Quickly visualize a PMTiles archive on an interactive map using mapgl.
+#' Quickly visualize a PMTiles archive or TileJSON endpoint on an interactive map using mapgl.
 #' Automatically detects the tile type and applies appropriate styling.
 #' For local files, automatically starts a background server.
 #'
-#' @param input Path to a local PMTiles file or URL to a remote archive.
+#' @param input Path to a local PMTiles file, URL to a remote archive, or TileJSON endpoint URL.
 #' @param source_layer Name of the source layer to display. If `NULL` (default),
 #'   automatically uses the first layer found in the metadata.
 #' @param style Base map style. Can be a mapgl style function like
@@ -39,6 +39,10 @@
 #' **Remote files**: If `input` is a URL (starts with `http://` or `https://`),
 #' uses the URL directly without starting a local server.
 #'
+#' **TileJSON endpoints**: If `input` ends with `.json`, it's treated as a TileJSON
+#' endpoint. The function fetches the TileJSON metadata and uses `add_vector_source()`
+#' to display the tiles.
+#'
 #' # Geometry Detection
 #'
 #' When `layer_type = "auto"`, the function inspects the metadata to determine
@@ -59,6 +63,9 @@
 #'
 #' # View remote PMTiles
 #' pm_view("https://example.com/tiles.pmtiles")
+#'
+#' # View TileJSON endpoint
+#' pm_view("http://localhost:8080/tiles.json")
 #'
 #' # Use specific source layer
 #' pm_view("data.pmtiles", source_layer = "buildings")
@@ -95,10 +102,27 @@ pm_view <- function(
     )
   }
 
-  # Determine if input is local or remote
+  # Determine input type: TileJSON, remote PMTiles, or local PMTiles
   is_remote <- grepl("^https?://", input)
+  is_tilejson <- grepl("\\.json$", input, ignore.case = TRUE)
 
-  if (is_remote) {
+  if (is_tilejson) {
+    # TileJSON endpoint - fetch and parse directly
+    tilejson_url <- input
+    message("Loading TileJSON: ", input)
+
+    # Check if jsonlite is available
+    if (!requireNamespace("jsonlite", quietly = TRUE)) {
+      stop(
+        "Package 'jsonlite' is required for TileJSON support.\n",
+        "Install it with: install.packages('jsonlite')",
+        call. = FALSE
+      )
+    }
+
+    # Fetch and parse TileJSON
+    metadata <- jsonlite::fromJSON(input)
+  } else if (is_remote) {
     # Remote file - use URL directly
     pmtiles_url <- input
     message("Loading remote PMTiles: ", input)
@@ -133,7 +157,12 @@ pm_view <- function(
     if (
       !is.null(metadata$vector_layers) && length(metadata$vector_layers) > 0
     ) {
-      source_layer <- metadata$vector_layers[[1]]$id
+      # Handle both data.frame (TileJSON) and list (PMTiles) formats
+      if (is.data.frame(metadata$vector_layers)) {
+        source_layer <- metadata$vector_layers$id[1]
+      } else {
+        source_layer <- metadata$vector_layers[[1]]$id
+      }
       layer_index <- 1
       message("Using source layer: ", source_layer)
     } else {
@@ -145,10 +174,15 @@ pm_view <- function(
   } else {
     # Find the index of the specified source layer
     if (!is.null(metadata$vector_layers)) {
-      for (i in seq_along(metadata$vector_layers)) {
-        if (metadata$vector_layers[[i]]$id == source_layer) {
-          layer_index <- i
-          break
+      if (is.data.frame(metadata$vector_layers)) {
+        layer_index <- which(metadata$vector_layers$id == source_layer)[1]
+        if (is.na(layer_index)) layer_index <- 1
+      } else {
+        for (i in seq_along(metadata$vector_layers)) {
+          if (metadata$vector_layers[[i]]$id == source_layer) {
+            layer_index <- i
+            break
+          }
         }
       }
     }
@@ -167,7 +201,11 @@ pm_view <- function(
     # Infer from layer name or fields
     if (is.null(geom_type) && !is.null(metadata$vector_layers) &&
         length(metadata$vector_layers) >= layer_index) {
-      layer_id <- metadata$vector_layers[[layer_index]]$id
+      if (is.data.frame(metadata$vector_layers)) {
+        layer_id <- metadata$vector_layers$id[layer_index]
+      } else {
+        layer_id <- metadata$vector_layers[[layer_index]]$id
+      }
       # Common patterns for geometry inference
       if (grepl("point|poi|place", layer_id, ignore.case = TRUE)) {
         geom_type <- "Point"
@@ -206,20 +244,34 @@ pm_view <- function(
   # Get bounds and zoom info for initial view
   bounds <- NULL
   if (!is.null(metadata$antimeridian_adjusted_bounds)) {
+    # PMTiles metadata format (comma-separated string)
     bounds_str <- strsplit(metadata$antimeridian_adjusted_bounds, ",")[[1]]
     bounds <- as.numeric(bounds_str)
+  } else if (!is.null(metadata$bounds)) {
+    # TileJSON format (array)
+    bounds <- metadata$bounds
   }
 
   # Get min/max zoom from the specific layer we're displaying
   minzoom <- NULL
   maxzoom <- NULL
-  if (
+  if (is_tilejson) {
+    # TileJSON has zoom levels at the top level
+    minzoom <- metadata$minzoom
+    maxzoom <- metadata$maxzoom
+  } else if (
     !is.null(metadata$vector_layers) &&
       length(metadata$vector_layers) >= layer_index
   ) {
-    layer_metadata <- metadata$vector_layers[[layer_index]]
-    minzoom <- layer_metadata$minzoom
-    maxzoom <- layer_metadata$maxzoom
+    # PMTiles metadata has zoom levels per layer
+    if (is.data.frame(metadata$vector_layers)) {
+      minzoom <- metadata$vector_layers$minzoom[layer_index]
+      maxzoom <- metadata$vector_layers$maxzoom[layer_index]
+    } else {
+      layer_metadata <- metadata$vector_layers[[layer_index]]
+      minzoom <- layer_metadata$minzoom
+      maxzoom <- layer_metadata$maxzoom
+    }
   }
 
   # Create base map with minZoom constraint if tiles have a minzoom
@@ -234,12 +286,22 @@ pm_view <- function(
   ) |>
     mapgl::set_projection("globe")
 
-  # Add PMTiles source
-  map <- mapgl::add_pmtiles_source(
-    map,
-    id = "pmtiles",
-    url = pmtiles_url
-  )
+  # Add source (PMTiles or TileJSON)
+  if (is_tilejson) {
+    # Use add_vector_source for TileJSON
+    map <- mapgl::add_vector_source(
+      map,
+      id = "pmtiles",
+      url = tilejson_url
+    )
+  } else {
+    # Use add_pmtiles_source for PMTiles
+    map <- mapgl::add_pmtiles_source(
+      map,
+      id = "pmtiles",
+      url = pmtiles_url
+    )
+  }
 
   # Build hover_options and popup if inspect_features is TRUE
   hover_opts <- NULL
@@ -276,9 +338,17 @@ pm_view <- function(
     # Fallback to vector_layers.fields (e.g., Overture Maps, Planetiler format)
     if (is.null(attr_names) && !is.null(metadata$vector_layers) &&
         length(metadata$vector_layers) >= layer_index) {
-      vector_layer <- metadata$vector_layers[[layer_index]]
-      if (!is.null(vector_layer$fields)) {
-        attr_names <- names(vector_layer$fields)
+      if (is.data.frame(metadata$vector_layers)) {
+        # For TileJSON (data frame), fields is itself a data frame
+        vector_layer_fields <- metadata$vector_layers$fields
+        if (!is.null(vector_layer_fields) && is.data.frame(vector_layer_fields)) {
+          attr_names <- names(vector_layer_fields)
+        }
+      } else {
+        vector_layer <- metadata$vector_layers[[layer_index]]
+        if (!is.null(vector_layer$fields)) {
+          attr_names <- names(vector_layer$fields)
+        }
       }
     }
 
