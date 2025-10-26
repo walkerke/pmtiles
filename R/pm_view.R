@@ -157,7 +157,12 @@ pm_view <- function(
     if (
       !is.null(metadata$vector_layers) && length(metadata$vector_layers) > 0
     ) {
-      source_layer <- metadata$vector_layers[[1]]$id
+      # Handle both data.frame (TileJSON) and list (PMTiles) formats
+      if (is.data.frame(metadata$vector_layers)) {
+        source_layer <- metadata$vector_layers$id[1]
+      } else {
+        source_layer <- metadata$vector_layers[[1]]$id
+      }
       layer_index <- 1
       message("Using source layer: ", source_layer)
     } else {
@@ -169,10 +174,15 @@ pm_view <- function(
   } else {
     # Find the index of the specified source layer
     if (!is.null(metadata$vector_layers)) {
-      for (i in seq_along(metadata$vector_layers)) {
-        if (metadata$vector_layers[[i]]$id == source_layer) {
-          layer_index <- i
-          break
+      if (is.data.frame(metadata$vector_layers)) {
+        layer_index <- which(metadata$vector_layers$id == source_layer)[1]
+        if (is.na(layer_index)) layer_index <- 1
+      } else {
+        for (i in seq_along(metadata$vector_layers)) {
+          if (metadata$vector_layers[[i]]$id == source_layer) {
+            layer_index <- i
+            break
+          }
         }
       }
     }
@@ -191,7 +201,11 @@ pm_view <- function(
     # Infer from layer name or fields
     if (is.null(geom_type) && !is.null(metadata$vector_layers) &&
         length(metadata$vector_layers) >= layer_index) {
-      layer_id <- metadata$vector_layers[[layer_index]]$id
+      if (is.data.frame(metadata$vector_layers)) {
+        layer_id <- metadata$vector_layers$id[layer_index]
+      } else {
+        layer_id <- metadata$vector_layers[[layer_index]]$id
+      }
       # Common patterns for geometry inference
       if (grepl("point|poi|place", layer_id, ignore.case = TRUE)) {
         geom_type <- "Point"
@@ -250,9 +264,14 @@ pm_view <- function(
       length(metadata$vector_layers) >= layer_index
   ) {
     # PMTiles metadata has zoom levels per layer
-    layer_metadata <- metadata$vector_layers[[layer_index]]
-    minzoom <- layer_metadata$minzoom
-    maxzoom <- layer_metadata$maxzoom
+    if (is.data.frame(metadata$vector_layers)) {
+      minzoom <- metadata$vector_layers$minzoom[layer_index]
+      maxzoom <- metadata$vector_layers$maxzoom[layer_index]
+    } else {
+      layer_metadata <- metadata$vector_layers[[layer_index]]
+      minzoom <- layer_metadata$minzoom
+      maxzoom <- layer_metadata$maxzoom
+    }
   }
 
   # Create base map with minZoom constraint if tiles have a minzoom
@@ -319,9 +338,17 @@ pm_view <- function(
     # Fallback to vector_layers.fields (e.g., Overture Maps, Planetiler format)
     if (is.null(attr_names) && !is.null(metadata$vector_layers) &&
         length(metadata$vector_layers) >= layer_index) {
-      vector_layer <- metadata$vector_layers[[layer_index]]
-      if (!is.null(vector_layer$fields)) {
-        attr_names <- names(vector_layer$fields)
+      if (is.data.frame(metadata$vector_layers)) {
+        # For TileJSON (data frame), fields is itself a data frame
+        vector_layer_fields <- metadata$vector_layers$fields
+        if (!is.null(vector_layer_fields) && is.data.frame(vector_layer_fields)) {
+          attr_names <- names(vector_layer_fields)
+        }
+      } else {
+        vector_layer <- metadata$vector_layers[[layer_index]]
+        if (!is.null(vector_layer$fields)) {
+          attr_names <- names(vector_layer$fields)
+        }
       }
     }
 
