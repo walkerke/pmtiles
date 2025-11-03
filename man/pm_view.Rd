@@ -17,6 +17,8 @@ pm_view(
   circle_color = "#088",
   circle_radius = 5,
   inspect_features = FALSE,
+  highlight = FALSE,
+  promote_id = NULL,
   ...
 )
 }
@@ -46,8 +48,15 @@ Default is `"auto"` which detects based on geometry type.}
 
 \item{circle_radius}{Circle radius for points. Default is 5.}
 
-\item{inspect_features}{Logical. If `TRUE`, adds hover effects and tooltips showing
-feature attributes. Default is `FALSE`.}
+\item{inspect_features}{Logical. If `TRUE`, shows tooltips with feature attributes.
+Default is `FALSE`.}
+
+\item{highlight}{Logical. If `TRUE`, enables hover highlighting effects. Requires
+the tileset to have an ID property configured. Default is `FALSE`.}
+
+\item{promote_id}{Optional. Column name to promote as the feature ID for hover
+highlighting. Only used when `highlight = TRUE`. If `NULL`, assumes the tileset
+already has an ID property configured during tile generation.}
 
 \item{...}{Additional arguments passed to the layer function.}
 }
@@ -84,6 +93,19 @@ the geometry type and applies appropriate styling:
 - Polygon/MultiPolygon → fill layer
 - LineString/MultiLineString → line layer
 - Point/MultiPoint → circle layer
+
+# Feature Inspection and Highlighting
+
+Set `inspect_features = TRUE` to show tooltips with feature attributes on hover.
+This works for any tileset.
+
+Set `highlight = TRUE` to enable hover highlighting effects (features change
+color/style when hovered). **Important**: This requires the tileset to have an
+ID property configured. You can either:
+- Configure IDs during tile generation (recommended)
+- Use `promote_id = "column_name"` to promote an existing attribute as the ID
+
+If the tileset lacks proper IDs, highlighting will not work even if enabled.
 }
 \examples{
 \dontrun{
@@ -103,6 +125,15 @@ pm_view("http://localhost:8080/tiles.json")
 
 # Use specific source layer
 pm_view("data.pmtiles", source_layer = "buildings")
+
+# Enable feature inspection with tooltips
+pm_view("data.pmtiles", inspect_features = TRUE)
+
+# Enable hover highlighting (requires ID property in tileset)
+pm_view("data.pmtiles",
+        inspect_features = TRUE,
+        highlight = TRUE,
+        promote_id = "id")
 
 # Further customize with mapgl
 pm_view("data.pmtiles") |>

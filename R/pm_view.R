@@ -19,8 +19,13 @@
 #' @param line_width Line width. Default is 1.
 #' @param circle_color Circle color for points. Default is `"#088"`.
 #' @param circle_radius Circle radius for points. Default is 5.
-#' @param inspect_features Logical. If `TRUE`, adds hover effects and tooltips showing
-#'   feature attributes. Default is `FALSE`.
+#' @param inspect_features Logical. If `TRUE`, shows tooltips with feature attributes.
+#'   Default is `FALSE`.
+#' @param highlight Logical. If `TRUE`, enables hover highlighting effects. Requires
+#'   the tileset to have an ID property configured. Default is `FALSE`.
+#' @param promote_id Optional. Column name to promote as the feature ID for hover
+#'   highlighting. Only used when `highlight = TRUE`. If `NULL`, assumes the tileset
+#'   already has an ID property configured during tile generation.
 #' @param ... Additional arguments passed to the layer function.
 #'
 #' @return A mapgl map object.
@@ -51,6 +56,19 @@
 #' - LineString/MultiLineString → line layer
 #' - Point/MultiPoint → circle layer
 #'
+#' # Feature Inspection and Highlighting
+#'
+#' Set `inspect_features = TRUE` to show tooltips with feature attributes on hover.
+#' This works for any tileset.
+#'
+#' Set `highlight = TRUE` to enable hover highlighting effects (features change
+#' color/style when hovered). **Important**: This requires the tileset to have an
+#' ID property configured. You can either:
+#' - Configure IDs during tile generation (recommended)
+#' - Use `promote_id = "column_name"` to promote an existing attribute as the ID
+#'
+#' If the tileset lacks proper IDs, highlighting will not work even if enabled.
+#'
 #' @examples
 #' \dontrun{
 #' # View a local PMTiles file
@@ -69,6 +87,15 @@
 #'
 #' # Use specific source layer
 #' pm_view("data.pmtiles", source_layer = "buildings")
+#'
+#' # Enable feature inspection with tooltips
+#' pm_view("data.pmtiles", inspect_features = TRUE)
+#'
+#' # Enable hover highlighting (requires ID property in tileset)
+#' pm_view("data.pmtiles",
+#'         inspect_features = TRUE,
+#'         highlight = TRUE,
+#'         promote_id = "id")
 #'
 #' # Further customize with mapgl
 #' pm_view("data.pmtiles") |>
@@ -89,6 +116,8 @@ pm_view <- function(
   circle_color = "#088",
   circle_radius = 5,
   inspect_features = FALSE,
+  highlight = FALSE,
+  promote_id = NULL,
   ...
 ) {
   layer_type <- match.arg(layer_type)
@@ -292,14 +321,16 @@ pm_view <- function(
     map <- mapgl::add_vector_source(
       map,
       id = "pmtiles",
-      url = tilejson_url
+      url = tilejson_url,
+      promote_id = promote_id
     )
   } else {
     # Use add_pmtiles_source for PMTiles
     map <- mapgl::add_pmtiles_source(
       map,
       id = "pmtiles",
-      url = pmtiles_url
+      url = pmtiles_url,
+      promote_id = promote_id
     )
   }
 
@@ -307,15 +338,18 @@ pm_view <- function(
   hover_opts <- NULL
   popup_val <- NULL
   if (inspect_features) {
-    if (layer_type == "fill") {
-      hover_opts <- list(fill_color = "yellow", fill_opacity = 1)
-    } else if (layer_type == "line") {
-      hover_opts <- list(line_color = "yellow", line_width = line_width + 2)
-    } else if (layer_type == "circle") {
-      hover_opts <- list(
-        circle_color = "yellow",
-        circle_radius = circle_radius + 2
-      )
+    # Only build hover_options if highlight is TRUE
+    if (highlight) {
+      if (layer_type == "fill") {
+        hover_opts <- list(fill_color = "yellow", fill_opacity = 1)
+      } else if (layer_type == "line") {
+        hover_opts <- list(line_color = "yellow", line_width = line_width + 2)
+      } else if (layer_type == "circle") {
+        hover_opts <- list(
+          circle_color = "yellow",
+          circle_radius = circle_radius + 2
+        )
+      }
     }
 
     # Extract attribute names from tilestats or vector_layers to build popup
