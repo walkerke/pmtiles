@@ -1,8 +1,8 @@
 Package: pmtiles
 Type: Package
 Title: R Interface to PMTiles
-Version: 0.1.1
-Date: 2025-11-03
+Version: 0.1.2
+Date: 2025-11-28
 Authors@R: c(
     person("Kyle", "Walker", email = "kyle@walker-data.com", role = c("aut", "cre")),
     person("Brandon", "Liu", role = "cph", comment = "go-pmtiles library author"),

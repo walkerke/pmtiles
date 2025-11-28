@@ -4,10 +4,17 @@
 #' tippecanoe. This function requires tippecanoe to be installed on your system.
 #' See \url{https://github.com/felt/tippecanoe} for installation instructions.
 #'
-#' @param input An sf object, or path to a GeoJSON, FlatGeobuf, or CSV file
+#' @param input An sf object, path to a GeoJSON/FlatGeobuf/CSV file, or a list
+#'   for multi-layer output. For multi-layer PMTiles, provide either:
+#'   \itemize{
+#'     \item A list of sf objects or file paths (all layers share the same options)
+#'     \item A list of \code{\link{pm_layer}} objects (each layer can have different options)
+#'   }
 #' @param output Path to output file (.pmtiles or .mbtiles)
 #' @param layer_name Name for the layer in the tileset. If NULL, derived from
-#'   input filename or a random string for sf objects (tippecanoe -l)
+#'   input filename or a random string for sf objects (tippecanoe -l). For
+#'   multi-layer input, can be a character vector of names (one per layer), or
+#'   names will be derived from list names.
 #'
 #' @section Zoom Levels:
 #' @param min_zoom Minimum zoom level (tippecanoe -Z, default 0)
@@ -173,8 +180,41 @@
 #'   drop_densest_as_needed = TRUE,
 #'   simplification = 10
 #' )
+#'
+#' # Multi-layer with shared options (simple)
+#' pm_create(
+#'   input = list(
+#'     counties = counties_sf,
+#'     tracts = tracts_sf
+#'   ),
+#'   output = "census.pmtiles",
+#'   min_zoom = 2,
+#'   max_zoom = 12
+#' )
+#'
+#' # Multi-layer with per-layer options (using pm_layer)
+#' pm_create(
+#'   input = list(
+#'     pm_layer(
+#'       input = counties_sf,
+#'       layer_name = "counties",
+#'       min_zoom = 2,
+#'       max_zoom = 8
+#'     ),
+#'     pm_layer(
+#'       input = tracts_sf,
+#'       layer_name = "tracts",
+#'       min_zoom = 8,
+#'       max_zoom = 14,
+#'       drop_densest_as_needed = TRUE
+#'     )
+#'   ),
+#'   output = "census.pmtiles",
+#'   generate_ids = TRUE
+#' )
 #' }
 #'
+#' @seealso [pm_layer()] for creating layers with per-layer options
 #' @export
 pm_create <- function(
   input,
@@ -265,7 +305,70 @@ pm_create <- function(
     )
   }
 
-  # Handle sf objects vs file paths
+  # Check for multi-layer input (list of sf/files or list of pm_layer objects)
+  if (is.list(input) && !inherits(input, "sf")) {
+    # Build global options list from function arguments
+    global_opts <- list(
+      layer_name = layer_name,
+      min_zoom = min_zoom,
+      max_zoom = max_zoom,
+      guess_maxzoom = guess_maxzoom,
+      smallest_maximum_zoom_guess = smallest_maximum_zoom_guess,
+      base_zoom = base_zoom,
+      extend_zooms_if_still_dropping = extend_zooms_if_still_dropping,
+      full_detail = full_detail,
+      low_detail = low_detail,
+      minimum_detail = minimum_detail,
+      extra_detail = extra_detail,
+      exclude = exclude,
+      include = include,
+      exclude_all = exclude_all,
+      drop_rate = drop_rate,
+      drop_densest_as_needed = drop_densest_as_needed,
+      drop_fraction_as_needed = drop_fraction_as_needed,
+      drop_smallest_as_needed = drop_smallest_as_needed,
+      drop_lines = drop_lines,
+      drop_polygons = drop_polygons,
+      coalesce = coalesce,
+      coalesce_smallest_as_needed = coalesce_smallest_as_needed,
+      coalesce_densest_as_needed = coalesce_densest_as_needed,
+      coalesce_fraction_as_needed = coalesce_fraction_as_needed,
+      cluster_distance = cluster_distance,
+      cluster_maxzoom = cluster_maxzoom,
+      simplification = simplification,
+      no_line_simplification = no_line_simplification,
+      simplify_only_low_zooms = simplify_only_low_zooms,
+      no_tiny_polygon_reduction = no_tiny_polygon_reduction,
+      detect_shared_borders = detect_shared_borders,
+      no_simplification_of_shared_nodes = no_simplification_of_shared_nodes,
+      preserve_input_order = preserve_input_order,
+      reorder = reorder,
+      hilbert = hilbert,
+      maximum_tile_bytes = maximum_tile_bytes,
+      maximum_tile_features = maximum_tile_features,
+      no_feature_limit = no_feature_limit,
+      no_tile_size_limit = no_tile_size_limit,
+      generate_ids = generate_ids,
+      calculate_feature_density = calculate_feature_density,
+      read_parallel = read_parallel,
+      attribution = attribution,
+      description = description,
+      buffer = buffer,
+      other_options = other_options
+    )
+
+    return(.process_multi_layer(
+      input = input,
+      output = output,
+      layer_name = layer_name,
+      global_opts = global_opts,
+      tippecanoe_path = tippecanoe_path,
+      force = force,
+      quiet = quiet
+    ))
+  }
+
+  # Handle sf objects vs file paths (single layer)
   temp_file <- NULL
   if (inherits(input, "sf")) {
     # Convert sf to GeoJSON
@@ -573,6 +676,450 @@ pm_create <- function(
 
   if (!quiet) {
     message("\u2713 Created tileset: ", output)
+  }
+
+  invisible(output)
+}
+
+
+# =============================================================================
+# Internal helper functions for multi-layer support
+# =============================================================================
+
+#' Build tippecanoe arguments from options
+#' @noRd
+.build_tippecanoe_args <- function(opts) {
+  args <- character()
+
+  # Layer name
+  if (!is.null(opts$layer_name)) {
+    args <- c(args, "-l", opts$layer_name)
+  }
+
+ # Zoom levels
+  if (isTRUE(opts$guess_maxzoom)) {
+    args <- c(args, "-zg")
+  } else if (!is.null(opts$max_zoom)) {
+    args <- c(args, "-z", as.character(opts$max_zoom))
+  }
+
+  if (!is.null(opts$min_zoom)) {
+    args <- c(args, "-Z", as.character(opts$min_zoom))
+  }
+
+  if (!is.null(opts$smallest_maximum_zoom_guess)) {
+    args <- c(
+      args,
+      paste0("--smallest-maximum-zoom-guess=", opts$smallest_maximum_zoom_guess)
+    )
+  }
+
+  if (!is.null(opts$base_zoom)) {
+    args <- c(args, "-B", as.character(opts$base_zoom))
+  }
+
+  if (isTRUE(opts$extend_zooms_if_still_dropping)) {
+    args <- c(args, "-ae")
+  }
+
+  # Tile resolution
+  if (!is.null(opts$full_detail)) {
+    args <- c(args, "-d", as.character(opts$full_detail))
+  }
+
+  if (!is.null(opts$low_detail)) {
+    args <- c(args, "-D", as.character(opts$low_detail))
+  }
+
+  if (!is.null(opts$minimum_detail)) {
+    args <- c(args, "-m", as.character(opts$minimum_detail))
+  }
+
+  if (!is.null(opts$extra_detail)) {
+    args <- c(args, paste0("--extra-detail=", opts$extra_detail))
+  }
+
+  # Filtering attributes
+  if (isTRUE(opts$exclude_all)) {
+    args <- c(args, "-X")
+  } else {
+    if (!is.null(opts$exclude)) {
+      for (attr in opts$exclude) {
+        args <- c(args, "-x", attr)
+      }
+    }
+
+    if (!is.null(opts$include)) {
+      for (attr in opts$include) {
+        args <- c(args, "-y", attr)
+      }
+    }
+  }
+
+  # Feature dropping
+  if (!is.null(opts$drop_rate)) {
+    args <- c(args, paste0("-r", opts$drop_rate))
+  }
+
+  if (isTRUE(opts$drop_densest_as_needed)) {
+    args <- c(args, "-as")
+  }
+
+  if (isTRUE(opts$drop_fraction_as_needed)) {
+    args <- c(args, "-ad")
+  }
+
+  if (isTRUE(opts$drop_smallest_as_needed)) {
+    args <- c(args, "-an")
+  }
+
+  if (isTRUE(opts$drop_lines)) {
+    args <- c(args, "-al")
+  }
+
+  if (isTRUE(opts$drop_polygons)) {
+    args <- c(args, "-ap")
+  }
+
+  # Coalescing
+  if (isTRUE(opts$coalesce)) {
+    args <- c(args, "-ac")
+  }
+
+  if (isTRUE(opts$coalesce_smallest_as_needed)) {
+    args <- c(args, "-aN")
+  }
+
+  if (isTRUE(opts$coalesce_densest_as_needed)) {
+    args <- c(args, "-aD")
+  }
+
+  if (isTRUE(opts$coalesce_fraction_as_needed)) {
+    args <- c(args, "-aS")
+  }
+
+  # Clustering
+  if (!is.null(opts$cluster_distance)) {
+    args <- c(args, "-K", as.character(opts$cluster_distance))
+  }
+
+  if (!is.null(opts$cluster_maxzoom)) {
+    args <- c(args, paste0("-k", opts$cluster_maxzoom))
+  }
+
+  # Simplification
+  if (!is.null(opts$simplification)) {
+    args <- c(args, "-S", as.character(opts$simplification))
+  }
+
+  if (isTRUE(opts$no_line_simplification)) {
+    args <- c(args, "-ps")
+  }
+
+  if (isTRUE(opts$simplify_only_low_zooms)) {
+    args <- c(args, "-pS")
+  }
+
+  if (isTRUE(opts$no_tiny_polygon_reduction)) {
+    args <- c(args, "-pt")
+  }
+
+  if (isTRUE(opts$detect_shared_borders)) {
+    args <- c(args, "-ab")
+  }
+
+  if (isTRUE(opts$no_simplification_of_shared_nodes)) {
+    args <- c(args, "-pn")
+  }
+
+  # Ordering
+  if (isTRUE(opts$preserve_input_order)) {
+    args <- c(args, "-pi")
+  }
+
+  if (isTRUE(opts$reorder)) {
+    args <- c(args, "-ao")
+  }
+
+  if (isTRUE(opts$hilbert)) {
+    args <- c(args, "-ah")
+  }
+
+  # Tile limits
+  if (!is.null(opts$maximum_tile_bytes)) {
+    args <- c(args, "-M", as.character(opts$maximum_tile_bytes))
+  }
+
+  if (!is.null(opts$maximum_tile_features)) {
+    args <- c(args, "-O", as.character(opts$maximum_tile_features))
+  }
+
+  if (isTRUE(opts$no_feature_limit)) {
+    args <- c(args, "-pf")
+  }
+
+  if (isTRUE(opts$no_tile_size_limit)) {
+    args <- c(args, "-pk")
+  }
+
+  # Other options
+  if (isTRUE(opts$generate_ids)) {
+    args <- c(args, "-ai")
+  }
+
+  if (isTRUE(opts$calculate_feature_density)) {
+    args <- c(args, "-ag")
+  }
+
+  if (isTRUE(opts$read_parallel)) {
+    args <- c(args, "-P")
+  }
+
+  if (!is.null(opts$attribution)) {
+    args <- c(args, "-A", opts$attribution)
+  }
+
+  if (!is.null(opts$description)) {
+    args <- c(args, "-N", opts$description)
+  }
+
+  if (!is.null(opts$buffer)) {
+    args <- c(args, "-b", as.character(opts$buffer))
+  }
+
+  # Additional options
+  if (!is.null(opts$other_options)) {
+    args <- c(args, opts$other_options)
+  }
+
+  args
+}
+
+
+#' Convert sf object to GeoJSON file
+#' @noRd
+.sf_to_geojson <- function(sf_obj, output_path, quiet = FALSE) {
+  if (!requireNamespace("sf", quietly = TRUE)) {
+    stop("Package 'sf' is required for sf object input", call. = FALSE)
+  }
+
+  # Transform to WGS84 if needed
+  if (!sf::st_crs(sf_obj) == 4326) {
+    sf_obj <- sf::st_transform(sf_obj, 4326)
+  }
+
+  # Use yyjsonr if available for faster GeoJSON writing
+  use_yyjsonr <- requireNamespace("yyjsonr", quietly = TRUE)
+
+  if (use_yyjsonr) {
+    if (!quiet) {
+      message("  Writing GeoJSON with yyjsonr (fast)...")
+    }
+    yyjsonr::write_geojson_file(sf_obj, output_path)
+  } else {
+    if (!quiet) {
+      message(
+        "  Writing GeoJSON with sf (install 'yyjsonr' for faster writing)..."
+      )
+    }
+    sf::st_write(sf_obj, output_path, quiet = TRUE, delete_dsn = TRUE)
+  }
+
+  output_path
+}
+
+
+#' Run tile-join to merge multiple tilesets
+#' @noRd
+.run_tile_join <- function(input_files, output, force = TRUE, quiet = FALSE) {
+  tile_join_path <- Sys.which("tile-join")
+  if (tile_join_path == "") {
+    stop(
+      "tile-join is not installed or cannot be found.\n",
+      "tile-join is installed as part of tippecanoe.\n",
+      "See: https://github.com/felt/tippecanoe",
+      call. = FALSE
+    )
+  }
+
+  args <- c("-o", output)
+  if (force) {
+    args <- c(args, "-f")
+  }
+  args <- c(args, input_files)
+
+  if (!quiet) {
+    message("Merging layers with tile-join...")
+  }
+
+  result <- processx::run(
+    command = as.character(tile_join_path),
+    args = args,
+    echo_cmd = !quiet,
+    echo = !quiet,
+    error_on_status = TRUE
+  )
+
+  result
+}
+
+
+#' Process multi-layer input
+#' @noRd
+.process_multi_layer <- function(
+    input,
+    output,
+    layer_name,
+    global_opts,
+    tippecanoe_path,
+    force,
+    quiet) {
+  # Determine if input is list of pm_layer objects or list of sf/files
+  is_pm_layer_list <- all(vapply(input, inherits, logical(1), "pm_layer"))
+  is_simple_list <- all(vapply(input, function(x) {
+    inherits(x, "sf") || is.character(x)
+  }, logical(1)))
+
+  if (!is_pm_layer_list && !is_simple_list) {
+    stop(
+      "Multi-layer input must be either:\n",
+      "  - A list of sf objects or file paths (shared options)\
+",
+      "  - A list of pm_layer() objects (per-layer options)",
+      call. = FALSE
+    )
+  }
+
+  n_layers <- length(input)
+
+  # Resolve layer names
+  if (is_pm_layer_list) {
+    layer_names <- vapply(input, function(x) x$layer_name, character(1))
+  } else {
+    # Simple list: use provided layer_name vector, list names, or generate
+    if (!is.null(layer_name)) {
+      if (length(layer_name) != n_layers) {
+        stop(
+          "layer_name must have the same length as input list (",
+          n_layers, " layers)",
+          call. = FALSE
+        )
+      }
+      layer_names <- layer_name
+    } else if (!is.null(names(input))) {
+      layer_names <- names(input)
+      # Fill in missing names
+      missing_names <- layer_names == "" | is.na(layer_names)
+      if (any(missing_names)) {
+        layer_names[missing_names] <- stringi::stri_rand_strings(
+          sum(missing_names), 6
+        )
+      }
+    } else {
+      layer_names <- stringi::stri_rand_strings(n_layers, 6)
+    }
+  }
+
+  # Create temp directory for intermediate files
+  temp_dir <- tempfile(pattern = "pmtiles_multi_")
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  temp_mbtiles <- character(n_layers)
+
+  # Process each layer
+  for (i in seq_len(n_layers)) {
+    if (!quiet) {
+      message(sprintf("Processing layer %d/%d: %s", i, n_layers, layer_names[i]))
+    }
+
+    if (is_pm_layer_list) {
+      # pm_layer object: merge layer opts with global opts (layer takes priority)
+      layer <- input[[i]]
+      layer_input <- layer$input
+      layer_opts <- layer[!names(layer) %in% c("input")]
+
+      # Merge: layer options override global options
+      opts <- global_opts
+      for (nm in names(layer_opts)) {
+        if (!is.null(layer_opts[[nm]])) {
+          opts[[nm]] <- layer_opts[[nm]]
+        }
+      }
+    } else {
+      # Simple list: use global options with layer name
+      layer_input <- input[[i]]
+      opts <- global_opts
+      opts$layer_name <- layer_names[i]
+    }
+
+    # Prepare input file
+    if (inherits(layer_input, "sf")) {
+      if (!quiet) {
+        message("  Converting sf object to GeoJSON...")
+      }
+      input_path <- file.path(temp_dir, paste0(layer_names[i], ".geojson"))
+      .sf_to_geojson(layer_input, input_path, quiet = quiet)
+    } else if (is.character(layer_input)) {
+      input_path <- path.expand(layer_input)
+      if (!file.exists(input_path)) {
+        stop("Input file does not exist: ", input_path, call. = FALSE)
+      }
+    } else {
+      stop("Layer input must be an sf object or file path", call. = FALSE)
+    }
+
+    # Build tippecanoe args for this layer
+    temp_mbtiles[i] <- file.path(temp_dir, paste0(layer_names[i], ".mbtiles"))
+    args <- c("-o", temp_mbtiles[i], "-f")
+    args <- c(args, .build_tippecanoe_args(opts))
+    args <- c(args, input_path)
+
+    if (!quiet) {
+      message("  Running tippecanoe...")
+    }
+
+    tryCatch(
+      {
+        processx::run(
+          command = as.character(tippecanoe_path),
+          args = args,
+          echo_cmd = !quiet,
+          echo = !quiet,
+          error_on_status = TRUE
+        )
+      },
+      error = function(e) {
+        stop(
+          "tippecanoe execution failed for layer '", layer_names[i], "': ",
+          e$message,
+          call. = FALSE
+        )
+      }
+    )
+  }
+
+  # Merge all layers with tile-join
+  merged_mbtiles <- file.path(temp_dir, "merged.mbtiles")
+  .run_tile_join(temp_mbtiles, merged_mbtiles, force = TRUE, quiet = quiet)
+
+  # Convert to PMTiles if output is .pmtiles
+  output_ext <- tolower(tools::file_ext(output))
+  if (output_ext == "pmtiles") {
+    if (!quiet) {
+      message("Converting to PMTiles format...")
+    }
+    # Use pm_convert (will handle force option)
+    if (force && file.exists(output)) {
+      file.remove(output)
+    }
+    pm_convert(merged_mbtiles, output, verbose = !quiet)
+  } else {
+    # Output is mbtiles, just copy
+    if (force && file.exists(output)) {
+      file.remove(output)
+    }
+    file.copy(merged_mbtiles, output)
   }
 
   invisible(output)
