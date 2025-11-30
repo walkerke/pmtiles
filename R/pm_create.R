@@ -931,7 +931,12 @@ pm_create <- function(
 
 #' Run tile-join to merge multiple tilesets
 #' @noRd
-.run_tile_join <- function(input_files, output, force = TRUE, quiet = FALSE) {
+.run_tile_join <- function(input_files, output, force = TRUE,
+                           no_tile_size_limit = FALSE,
+                           exclude_all = FALSE,
+                           exclude = NULL,
+                           include = NULL,
+                           quiet = FALSE) {
   tile_join_path <- Sys.which("tile-join")
   if (tile_join_path == "") {
     stop(
@@ -945,6 +950,23 @@ pm_create <- function(
   args <- c("-o", output)
   if (force) {
     args <- c(args, "-f")
+  }
+  if (no_tile_size_limit) {
+    args <- c(args, "-pk")
+  }
+  if (exclude_all) {
+    args <- c(args, "-X")
+  } else {
+    if (!is.null(exclude)) {
+      for (attr in exclude) {
+        args <- c(args, "-x", attr)
+      }
+    }
+    if (!is.null(include)) {
+      for (attr in include) {
+        args <- c(args, "-y", attr)
+      }
+    }
   }
   args <- c(args, input_files)
 
@@ -1099,27 +1121,21 @@ pm_create <- function(
     )
   }
 
-  # Merge all layers with tile-join
-  merged_mbtiles <- file.path(temp_dir, "merged.mbtiles")
-  .run_tile_join(temp_mbtiles, merged_mbtiles, force = TRUE, quiet = quiet)
+  # Merge all layers with tile-join directly to final output
+  # tile-join supports both .mbtiles and .pmtiles output
+  .run_tile_join(
+    temp_mbtiles,
+    output,
+    force = force,
+    no_tile_size_limit = isTRUE(global_opts$no_tile_size_limit),
+    exclude_all = isTRUE(global_opts$exclude_all),
+    exclude = global_opts$exclude,
+    include = global_opts$include,
+    quiet = quiet
+  )
 
-  # Convert to PMTiles if output is .pmtiles
-  output_ext <- tolower(tools::file_ext(output))
-  if (output_ext == "pmtiles") {
-    if (!quiet) {
-      message("Converting to PMTiles format...")
-    }
-    # Use pm_convert (will handle force option)
-    if (force && file.exists(output)) {
-      file.remove(output)
-    }
-    pm_convert(merged_mbtiles, output, verbose = !quiet)
-  } else {
-    # Output is mbtiles, just copy
-    if (force && file.exists(output)) {
-      file.remove(output)
-    }
-    file.copy(merged_mbtiles, output)
+  if (!quiet) {
+    message("\u2713 Created tileset: ", output)
   }
 
   invisible(output)
