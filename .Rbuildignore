@@ -11,3 +11,4 @@
 ^inst/go-pmtiles/pmtiles/.*_test\.go$
 ^inst/go-pmtiles/pmtiles/fixtures$
 ^tools$
+^\.gitmodules$

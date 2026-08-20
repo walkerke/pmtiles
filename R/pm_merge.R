@@ -16,9 +16,16 @@
 #' @details
 #' Merging is performed by the go-pmtiles CLI (`pmtiles merge`). The input
 #' archives must be disjoint; merging archives that contain the same tile
-#' coordinates is an error. To recombine overlapping tilesets, re-create the
-#' archive from source data instead (see [pm_create()], which supports
-#' multi-layer output via [pm_layer()]).
+#' coordinates is an error. All inputs must also share the same tile type
+#' and tile compression.
+#'
+#' The merged archive's JSON metadata and center are copied from the
+#' **first input only**. In particular, `vector_layers` metadata comes from
+#' the first archive -- so inputs should use the same layer name(s), or
+#' layers present only in later inputs will be missing from the merged
+#' metadata even though their tiles are included. To recombine tilesets
+#' with differing layers, re-create the archive from source data instead
+#' (see [pm_create()], which supports multi-layer output via [pm_layer()]).
 #'
 #' @return Invisibly returns the path to the output archive.
 #'
@@ -52,12 +59,23 @@ pm_merge <- function(inputs, output, verbose = TRUE) {
     )
   }
 
-  if (!is.character(output) || length(output) != 1 || !nzchar(output)) {
+  if (!is.character(output) || length(output) != 1 || !nzchar(trimws(output))) {
     stop("output must be a single file path", call. = FALSE)
   }
   output <- path.expand(output)
 
-  args <- c("merge", inputs, output)
+  input_paths <- normalizePath(inputs, mustWork = FALSE)
+  output_path <- normalizePath(output, mustWork = FALSE)
+  if (output_path %in% input_paths) {
+    stop("output must not be one of the input archives", call. = FALSE)
+  }
+
+  # Merge into a temp file first: the CLI truncates its output path
+  # immediately, so a failed merge must not destroy an existing output
+  tmp_out <- tempfile(fileext = ".pmtiles")
+  on.exit(unlink(tmp_out), add = TRUE)
+
+  args <- c("merge", inputs, tmp_out)
 
   if (verbose) {
     message("Merging ", length(inputs), " archives into ", output, "...")
@@ -69,7 +87,11 @@ pm_merge <- function(inputs, output, verbose = TRUE) {
     cat(result$stdout)
   }
 
-  if (result$status == 0) {
+  if (!file.copy(tmp_out, output, overwrite = TRUE)) {
+    stop("Failed to write merged archive to: ", output, call. = FALSE)
+  }
+
+  if (verbose) {
     message("\u2713 Successfully created: ", output)
   }
 

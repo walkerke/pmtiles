@@ -4,6 +4,12 @@
 
 set -e
 
+# In a fresh clone the go-pmtiles submodule is empty; fetch it first
+if [ ! -f inst/go-pmtiles/go.mod ]; then
+    echo "Initializing go-pmtiles submodule..."
+    git submodule update --init inst/go-pmtiles
+fi
+
 cd inst/go-pmtiles
 
 # Stamp the binaries with the checked-out go-pmtiles version

@@ -28,9 +28,16 @@ ranges.
 \details{
 Merging is performed by the go-pmtiles CLI (\verb{pmtiles merge}). The input
 archives must be disjoint; merging archives that contain the same tile
-coordinates is an error. To recombine overlapping tilesets, re-create the
-archive from source data instead (see \code{\link[=pm_create]{pm_create()}}, which supports
-multi-layer output via \code{\link[=pm_layer]{pm_layer()}}).
+coordinates is an error. All inputs must also share the same tile type
+and tile compression.
+
+The merged archive's JSON metadata and center are copied from the
+\strong{first input only}. In particular, \code{vector_layers} metadata comes from
+the first archive -- so inputs should use the same layer name(s), or
+layers present only in later inputs will be missing from the merged
+metadata even though their tiles are included. To recombine tilesets
+with differing layers, re-create the archive from source data instead
+(see \code{\link[=pm_create]{pm_create()}}, which supports multi-layer output via \code{\link[=pm_layer]{pm_layer()}}).
 }
 \examples{
 \dontrun{

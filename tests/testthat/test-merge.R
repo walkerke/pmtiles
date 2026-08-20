@@ -9,10 +9,14 @@ test_that("pm_merge validates its inputs", {
     "not found"
   )
   a <- tempfile(fileext = ".pmtiles")
-  file.create(a)
-  on.exit(unlink(a), add = TRUE)
+  b <- tempfile(fileext = ".pmtiles")
+  file.create(a, b)
+  on.exit(unlink(c(a, b)), add = TRUE)
   expect_error(pm_merge(c(a, "nope-b.pmtiles"), "out.pmtiles"), "nope-b")
-  expect_error(pm_merge(c(a, a), output = ""), "single file path")
+  expect_error(pm_merge(c(a, b), output = ""), "single file path")
+  expect_error(pm_merge(c(a, b), output = "   "), "single file path")
+  # the output must never alias an input: the CLI truncates it on open
+  expect_error(pm_merge(c(a, b), output = a), "must not be one of the input")
 })
 
 test_that("pm_merge combines two disjoint archives", {
@@ -39,10 +43,11 @@ test_that("pm_merge combines two disjoint archives", {
   west <- file.path(dir, "west.pmtiles")
   east <- file.path(dir, "east.pmtiles")
   # zoom 4 only: points on opposite sides of the world share no tiles,
-  # so the archives are disjoint as pm_merge requires
+  # so the archives are disjoint as pm_merge requires. Merged metadata
+  # comes from the first input only, so both use the same layer name.
   suppressMessages({
-    pm_create(west_gj, west, min_zoom = 4, max_zoom = 4, quiet = TRUE)
-    pm_create(east_gj, east, min_zoom = 4, max_zoom = 4, quiet = TRUE)
+    pm_create(west_gj, west, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
+    pm_create(east_gj, east, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
   })
   expect_true(file.exists(west) && file.exists(east))
 
@@ -56,4 +61,45 @@ test_that("pm_merge combines two disjoint archives", {
   header <- pm_show(merged, header_json = TRUE)
   expect_lt(header$bounds[[1]], -99)
   expect_gt(header$bounds[[3]], 99)
+
+  # documented limitation: vector_layers metadata is copied from the
+  # first input only (here identical across inputs by construction)
+  md <- pm_show(merged, metadata = TRUE)
+  layer_ids <- vapply(md$vector_layers, function(l) l$id, character(1))
+  expect_identical(layer_ids, "pts")
+})
+
+test_that("a failed pm_merge preserves an existing output file", {
+  skip_if(Sys.which("tippecanoe") == "", "tippecanoe not available")
+
+  dir <- tempfile("merge-fail-test")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+
+  gj <- file.path(dir, "pts.geojson")
+  writeLines(
+    '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-100,39]}},{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-99,41]}}]}',
+    gj
+  )
+  valid <- file.path(dir, "valid.pmtiles")
+  suppressMessages(
+    pm_create(gj, valid, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
+  )
+
+  # a truncated archive makes the merge fail partway through
+  truncated <- file.path(dir, "truncated.pmtiles")
+  writeBin(readBin(valid, "raw", n = 100), truncated)
+
+  sentinel <- charToRaw("previous-output")
+  output <- file.path(dir, "merged.pmtiles")
+  writeBin(sentinel, output)
+
+  expect_error(
+    suppressMessages(pm_merge(c(valid, truncated), output)),
+    "failed with status"
+  )
+
+  # the pre-existing output survives the failed merge untouched
+  expect_true(file.exists(output))
+  expect_identical(readBin(output, "raw", n = 100), sentinel)
 })

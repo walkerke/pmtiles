@@ -1,0 +1,3 @@
+[submodule "inst/go-pmtiles"]
+	path = inst/go-pmtiles
+	url = https://github.com/protomaps/go-pmtiles.git
