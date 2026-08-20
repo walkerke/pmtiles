@@ -6,6 +6,10 @@ set -e
 
 cd inst/go-pmtiles
 
+# Stamp the binaries with the checked-out go-pmtiles version
+VERSION=$(git describe --tags 2>/dev/null || echo "dev")
+echo "go-pmtiles version: $VERSION"
+
 # Define platforms
 PLATFORMS=(
     "darwin/amd64"
@@ -34,7 +38,7 @@ for platform in "${PLATFORMS[@]}"; do
     OUTPUT_PATH="$OUTPUT_DIR/$BINARY_NAME"
 
     echo "Building for $GOOS/$GOARCH..."
-    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w" -o "$OUTPUT_PATH" main.go
+    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w -X main.version=$VERSION" -o "$OUTPUT_PATH" main.go
 
     if [ $? -eq 0 ]; then
         echo "  ✓ Successfully built $OUTPUT_PATH"

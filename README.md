@@ -164,6 +164,7 @@ pm_view("http://localhost:8080/YOUR_TILES.pmtiles", inspect_features = TRUE)
 - `pm_create()` - Create PMTiles from GeoJSON/sf with tippecanoe
 - `pm_convert()` - Convert MBTiles to/from PMTiles
 - `pm_extract()` - Extract a region or zoom levels
+- `pm_merge()` - Merge disjoint archives into one
 - `pm_cluster()` - Cluster tiles for cloud upload
 - `pm_upload()` - Upload to S3/R2/GCS/Azure
 - `r2_bucket()`, `s3_bucket()`, `gcs_bucket()`, `azure_bucket()`,
