@@ -10,52 +10,63 @@ Provides R bindings to the PMTiles command-line interface for working with
 PMTiles archives. PMTiles is a single-file archive format for tiled data
 that enables efficient cloud-native storage and retrieval of map tiles.
 }
-\details{
-# PMTiles Format
-
+\section{PMTiles Format}{
 PMTiles is a single-file archive format for pyramids of tiled data, designed
 to be hosted on commodity storage and accessed on-demand over HTTP. It is
 designed for efficient storage and retrieval of map tiles from cloud storage
 without requiring a tile server.
+}
 
-# Main Functions
+\section{Main Functions}{
+\strong{Inspecting Archives:}
+\itemize{
+\item \code{\link[=pm_show]{pm_show()}}: Display archive information and metadata
+\item \code{\link[=pm_verify]{pm_verify()}}: Verify archive structure
+\item \code{\link[=pm_version]{pm_version()}}: Get CLI version
+}
 
-**Inspecting Archives:**
-- [pm_show()]: Display archive information and metadata
-- [pm_verify()]: Verify archive structure
-- [pm_version()]: Get CLI version
+\strong{Working with Tiles:}
+\itemize{
+\item \code{\link[=pm_tile]{pm_tile()}}: Extract a single tile
+\item \code{\link[=pm_extract]{pm_extract()}}: Create subset archive by region or zoom
+}
 
-**Working with Tiles:**
-- [pm_tile()]: Extract a single tile
-- [pm_extract()]: Create subset archive by region or zoom
+\strong{Converting and Optimizing:}
+\itemize{
+\item \code{\link[=pm_convert]{pm_convert()}}: Convert MBTiles to PMTiles
+\item \code{\link[=pm_cluster]{pm_cluster()}}: Optimize archive layout
+}
 
-**Converting and Optimizing:**
-- [pm_convert()]: Convert MBTiles to PMTiles
-- [pm_cluster()]: Optimize archive layout
+\strong{Cloud Operations:}
+\itemize{
+\item \code{\link[=pm_upload]{pm_upload()}}: Upload archive to cloud storage
+\item \code{\link[=pm_edit]{pm_edit()}}: Edit archive header or metadata
+}
+}
 
-**Cloud Operations:**
-- [pm_upload()]: Upload archive to cloud storage
-- [pm_edit()]: Edit archive header or metadata
-
-# Cloud Storage Support
-
+\section{Cloud Storage Support}{
 PMTiles supports reading from and writing to cloud storage:
-- Amazon S3 and S3-compatible storage (Cloudflare R2, MinIO, etc.)
-- Azure Blob Storage
-- Google Cloud Storage
+\itemize{
+\item Amazon S3 and S3-compatible storage (Cloudflare R2, MinIO, etc.)
+\item Azure Blob Storage
+\item Google Cloud Storage
+}
 
 Authentication uses standard cloud provider environment variables.
+}
 
-# System Requirements
-
+\section{System Requirements}{
 The package includes pre-compiled binaries for common platforms:
-- macOS (Intel and Apple Silicon)
-- Linux (amd64 and arm64)
-- Windows (amd64 and arm64)
+\itemize{
+\item macOS (Intel and Apple Silicon)
+\item Linux (amd64 and arm64)
+\item Windows (amd64 and arm64)
+}
 
 If pre-compiled binaries are not available for your platform, you'll need
 Go (>= 1.19) installed to build from source during package installation.
 }
+
 \references{
 PMTiles specification: \url{https://github.com/protomaps/PMTiles}
 }
@@ -69,6 +80,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Kyle Walker \email{kyle@walker-data.com}
+
+Authors:
+\itemize{
+  \item Kyle Walker \email{kyle@walker-data.com}
+}
 
 Other contributors:
 \itemize{

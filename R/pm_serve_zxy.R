@@ -11,7 +11,9 @@
 #'
 #' @param path Directory containing PMTiles files, or a specific path prefix.
 #'   Default is current directory (`"."`).
-#' @param bucket Optional cloud storage bucket specification (e.g., `"s3://bucket-name"`
+#' @param bucket Optional cloud storage bucket specification: a helper object
+#'   from [r2_bucket()], [s3_bucket()], [gcs_bucket()], [azure_bucket()], or
+#'   [s3_compatible_bucket()], or a bucket URL string (e.g., `"s3://bucket-name"`
 #'   or `"s3://bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"`).
 #'   When specified, serves tiles directly from cloud storage without downloading.
 #' @param port Port number for the tile server. Default is 8080.
@@ -105,13 +107,15 @@ pm_serve_zxy <- function(path = ".",
   # Check for pmtiles binary
   pmtiles_path <- pmtiles_binary()
 
+  bucket <- resolve_bucket(bucket)
+
   # Build command arguments
   args <- c("serve")
 
   # Add path or bucket
-  if (!is.null(bucket)) {
+  if (!is.null(bucket$url)) {
     # Bucket specified explicitly
-    args <- c(args, path, paste0("--bucket=", bucket))
+    args <- c(args, path, paste0("--bucket=", bucket$url))
   } else {
     # Check if path is a URL
     if (grepl("^https?://", path)) {
@@ -160,9 +164,9 @@ pm_serve_zxy <- function(path = ".",
   }
 
   # Display startup message
-  if (!is.null(bucket)) {
+  if (!is.null(bucket$url)) {
     message("Starting PMTiles Z/X/Y tile server from cloud storage...")
-    message("  Bucket: ", bucket)
+    message("  Bucket: ", bucket$url)
   } else {
     message("Starting PMTiles Z/X/Y tile server...")
     message("  Path: ", path)
@@ -175,12 +179,16 @@ pm_serve_zxy <- function(path = ".",
     # Run in background with processx
     message("  Running in background mode (use pm_stop_server() to stop)")
 
-    proc <- processx::process$new(
+    proc_args <- list(
       command = pmtiles_path,
       args = args,
       stdout = "|",
       stderr = "|"
     )
+    if (length(bucket$env)) {
+      proc_args$env <- c("current", bucket$env)
+    }
+    proc <- do.call(processx::process$new, proc_args)
 
     # Store process in package environment for tracking
     if (!exists("zxy_servers", envir = .GlobalEnv)) {
@@ -195,13 +203,18 @@ pm_serve_zxy <- function(path = ".",
     # Run in foreground (blocking)
     message("  Press Ctrl+C to stop server")
 
+    run_args <- list(
+      command = pmtiles_path,
+      args = args,
+      echo = TRUE,
+      error_on_status = FALSE
+    )
+    if (length(bucket$env)) {
+      run_args$env <- c("current", bucket$env)
+    }
+
     tryCatch({
-      processx::run(
-        command = pmtiles_path,
-        args = args,
-        echo = TRUE,
-        error_on_status = FALSE
-      )
+      do.call(processx::run, run_args)
     }, interrupt = function(e) {
       message("\nServer stopped")
     })

@@ -14,7 +14,10 @@
 #' @param minzoom Minimum zoom level to extract (inclusive). Default is 0.
 #' @param maxzoom Maximum zoom level to extract (inclusive). If not specified,
 #'   extracts all zoom levels from the source.
-#' @param bucket Optional remote bucket specification if `input` is remote.
+#' @param bucket Optional remote bucket specification if `input` is remote:
+#'   a helper object from [r2_bucket()], [s3_bucket()], [gcs_bucket()],
+#'   [azure_bucket()], or [s3_compatible_bucket()], or a bucket URL string
+#'   (e.g., `"s3://bucket-name"`).
 #' @param download_threads Number of parallel download threads for remote archives.
 #'   Default is 4.
 #' @param overfetch Ratio of extra data to download to minimize number of requests.
@@ -90,11 +93,13 @@ pm_extract <- function(input,
     stop("Region file not found: ", region, call. = FALSE)
   }
 
+  bucket <- resolve_bucket(bucket)
+
   # Build command arguments
   args <- c("extract", input, output)
 
-  if (!is.null(bucket)) {
-    args <- c(args, paste0("--bucket=", bucket))
+  if (!is.null(bucket$url)) {
+    args <- c(args, paste0("--bucket=", bucket$url))
   }
 
   if (!is.null(bbox)) {
@@ -125,7 +130,7 @@ pm_extract <- function(input,
     message("Extracting from ", input, " to ", output, "...")
   }
 
-  result <- pmtiles_exec(args)
+  result <- pmtiles_exec(args, env = bucket$env)
 
   if (verbose) {
     cat(result$stdout)

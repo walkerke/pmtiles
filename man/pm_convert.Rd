@@ -18,17 +18,17 @@ pm_convert(
 
 \item{output}{Path for output PMTiles file.}
 
-\item{force}{Logical. If `TRUE`, removes existing output file if present.
-Default is `FALSE`.}
+\item{force}{Logical. If \code{TRUE}, removes existing output file if present.
+Default is \code{FALSE}.}
 
-\item{no_deduplication}{Logical. If `TRUE`, skips tile deduplication to
+\item{no_deduplication}{Logical. If \code{TRUE}, skips tile deduplication to
 speed up conversion. Use this if you know the input has only unique tiles.
-Default is `FALSE`.}
+Default is \code{FALSE}.}
 
 \item{tmpdir}{Optional path to a folder for temporary files during conversion.
 If not specified, uses the system temporary directory.}
 
-\item{verbose}{Logical. If `TRUE`, prints progress information. Default is `TRUE`.}
+\item{verbose}{Logical. If \code{TRUE}, prints progress information. Default is \code{TRUE}.}
 }
 \value{
 Invisibly returns the path to the output archive.

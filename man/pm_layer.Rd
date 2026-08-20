@@ -175,11 +175,11 @@ geographic order (tippecanoe -pi)}
 covered by other parameters. Example: c("--coalesce")}
 }
 \value{
-A list with class `"pm_layer"` containing the input and all
-  specified options.
+A list with class \code{"pm_layer"} containing the input and all
+specified options.
 }
 \description{
-Creates a layer specification for use with `pm_create()` when building
+Creates a layer specification for use with \code{pm_create()} when building
 multi-layer PMTiles with per-layer tippecanoe options. Each layer can have
 its own zoom levels, drop rates, simplification settings, and other options.
 }
@@ -251,5 +251,5 @@ pm_create(
 
 }
 \seealso{
-[pm_create()]
+\code{\link[=pm_create]{pm_create()}}
 }

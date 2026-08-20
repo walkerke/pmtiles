@@ -15,14 +15,17 @@ pm_tile(input, z, x, y, output = NULL, bucket = NULL)
 
 \item{y}{Integer tile row.}
 
-\item{output}{Path where the tile should be saved. If `NULL` (default),
+\item{output}{Path where the tile should be saved. If \code{NULL} (default),
 returns the raw tile data as a raw vector.}
 
-\item{bucket}{Optional remote bucket specification for cloud storage.}
+\item{bucket}{Optional remote bucket specification for cloud storage:
+a helper object from \code{\link[=r2_bucket]{r2_bucket()}}, \code{\link[=s3_bucket]{s3_bucket()}}, \code{\link[=gcs_bucket]{gcs_bucket()}},
+\code{\link[=azure_bucket]{azure_bucket()}}, or \code{\link[=s3_compatible_bucket]{s3_compatible_bucket()}}, or a bucket URL string
+(e.g., \code{"s3://bucket-name"}).}
 }
 \value{
-If `output` is specified, writes tile to file and returns the output path invisibly.
-If `output` is `NULL`, returns the tile data as a raw vector.
+If \code{output} is specified, writes tile to file and returns the output path invisibly.
+If \code{output} is \code{NULL}, returns the tile data as a raw vector.
 }
 \description{
 Fetch one tile from a local or remote PMTiles archive and save it to a file.

@@ -77,7 +77,7 @@ pmtiles_binary <- function() {
 #' @keywords internal
 #' @noRd
 pmtiles_exec <- function(args, stdout = "|", stderr = "|", error_on_status = TRUE,
-                         stdout_callback = NULL) {
+                         stdout_callback = NULL, env = NULL) {
   binary <- pmtiles_binary()
 
   # Build argument list, only including non-NULL optional parameters
@@ -95,12 +95,37 @@ pmtiles_exec <- function(args, stdout = "|", stderr = "|", error_on_status = TRU
     run_args$stdout_callback <- stdout_callback
   }
 
+  # Extra env vars (e.g. cloud credentials from a bucket helper) are added on
+  # top of the current environment for the subprocess only
+  if (length(env)) {
+    run_args$env <- c("current", env)
+  }
+
   result <- do.call(processx::run, run_args)
 
   if (error_on_status && result$status != 0) {
+    # go-pmtiles sometimes reports errors on stdout; surface whatever we got,
+    # including stdout that was redirected to a file (e.g. by pm_tile())
+    has_text <- function(x) length(x) == 1 && is.character(x) && nzchar(trimws(x))
+    stdout_file <- if (is.character(stdout) && length(stdout) == 1 &&
+                       !stdout %in% c("|", "") && file.exists(stdout) &&
+                       isTRUE(file.size(stdout) > 0)) {
+      readChar(stdout, min(file.size(stdout), 4096L), useBytes = TRUE)
+    } else {
+      NULL
+    }
+    detail <- if (has_text(result$stderr)) {
+      result$stderr
+    } else if (has_text(result$stdout)) {
+      result$stdout
+    } else if (has_text(stdout_file)) {
+      stdout_file
+    } else {
+      "(no output captured)"
+    }
     stop(
       "PMTiles command failed with status ", result$status, "\n",
-      "Error: ", result$stderr,
+      "Error: ", detail,
       call. = FALSE
     )
   }

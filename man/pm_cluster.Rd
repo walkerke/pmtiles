@@ -9,11 +9,11 @@ pm_cluster(input, no_deduplication = FALSE, verbose = TRUE)
 \arguments{
 \item{input}{Path to input PMTiles file. The file will be modified in place.}
 
-\item{no_deduplication}{Logical. If `TRUE`, skips tile deduplication to
+\item{no_deduplication}{Logical. If \code{TRUE}, skips tile deduplication to
 speed up clustering. Use this if you know the input has only unique tiles.
-Default is `FALSE`.}
+Default is \code{FALSE}.}
 
-\item{verbose}{Logical. If `TRUE`, prints progress information. Default is `TRUE`.}
+\item{verbose}{Logical. If \code{TRUE}, prints progress information. Default is \code{TRUE}.}
 }
 \value{
 Invisibly returns the path to the clustered archive.

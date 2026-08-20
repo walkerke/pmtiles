@@ -7,14 +7,14 @@
 pm_stop_server(server = NULL)
 }
 \arguments{
-\item{server}{A server object returned by `pm_serve()` or `pm_serve_zxy()`,
-or a port number. If `NULL`, stops all running PMTiles servers.}
+\item{server}{A server object returned by \code{pm_serve()} or \code{pm_serve_zxy()},
+or a port number. If \code{NULL}, stops all running PMTiles servers.}
 }
 \value{
-Invisibly returns `TRUE` if server was stopped, `FALSE` otherwise.
+Invisibly returns \code{TRUE} if server was stopped, \code{FALSE} otherwise.
 }
 \description{
-Stop a PMTiles server that was started with `pm_serve()` or `pm_serve_zxy()`.
+Stop a PMTiles server that was started with \code{pm_serve()} or \code{pm_serve_zxy()}.
 }
 \examples{
 \dontrun{
@@ -34,5 +34,5 @@ pm_stop_server()
 
 }
 \seealso{
-[pm_serve()], [pm_serve_zxy()]
+\code{\link[=pm_serve]{pm_serve()}}, \code{\link[=pm_serve_zxy]{pm_serve_zxy()}}
 }

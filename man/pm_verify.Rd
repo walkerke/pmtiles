@@ -10,7 +10,7 @@ pm_verify(input)
 \item{input}{Path to a local PMTiles file.}
 }
 \value{
-Invisibly returns `TRUE` if verification succeeds, throws an error otherwise.
+Invisibly returns \code{TRUE} if verification succeeds, throws an error otherwise.
 }
 \description{
 Check that a PMTiles archive is ordered correctly and has correct header

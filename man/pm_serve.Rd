@@ -12,37 +12,39 @@ If a single file, its directory will be served.}
 
 \item{port}{Port number for the HTTP server. Default is 8080.}
 
-\item{background}{Logical. If `TRUE`, runs server in background and returns
-immediately. If `FALSE`, blocks until interrupted. Default is `TRUE`.}
+\item{background}{Logical. If \code{TRUE}, runs server in background and returns
+immediately. If \code{FALSE}, blocks until interrupted. Default is \code{TRUE}.}
 }
 \value{
-If `background = TRUE`, returns a list with:
-- `url`: Base URL of the server
-- `port`: Port number
-- `dir`: Directory being served
-- `daemon`: Server daemon ID (for stopping)
+If \code{background = TRUE}, returns a list with:
+\itemize{
+\item \code{url}: Base URL of the server
+\item \code{port}: Port number
+\item \code{dir}: Directory being served
+\item \code{daemon}: Server daemon ID (for stopping)
+}
 
-If `background = FALSE`, blocks until interrupted and returns nothing.
+If \code{background = FALSE}, blocks until interrupted and returns nothing.
 }
 \description{
 Start a local HTTP server to serve PMTiles files with CORS headers enabled.
 This allows PMTiles to be consumed by web maps (like mapgl) using the
 PMTiles.js client library. The server runs in the background and can be
-stopped with `pm_stop_server()`.
+stopped with \code{pm_stop_server()}.
 }
 \details{
-This function serves the **raw PMTiles files** with CORS headers, allowing
+This function serves the \strong{raw PMTiles files} with CORS headers, allowing
 them to be consumed by PMTiles.js in the browser. This works with mapgl's
-PMTiles protocol and `pm_view()` for quick visualization.
+PMTiles protocol and \code{pm_view()} for quick visualization.
 
-For a file at `tiles/data.pmtiles`, it will be available at:
-`http://localhost:PORT/data.pmtiles`
+For a file at \code{tiles/data.pmtiles}, it will be available at:
+\verb{http://localhost:PORT/data.pmtiles}
 
-**File size:** Works well for files up to ~1GB. For larger files, consider
-`pm_serve_zxy()` or serving from a Node.js server like http-server.
+\strong{File size:} Works well for files up to ~1GB. For larger files, consider
+\code{pm_serve_zxy()} or serving from a Node.js server like http-server.
 
 The server uses httpuv with custom CORS headers and HTTP range request support.
-When `background = TRUE`, the server runs as a background daemon.
+When \code{background = TRUE}, the server runs as a background daemon.
 }
 \examples{
 \dontrun{
@@ -65,5 +67,5 @@ pm_serve("data.pmtiles", background = FALSE)
 
 }
 \seealso{
-[pm_stop_server()], [pm_view()]
+\code{\link[=pm_stop_server]{pm_stop_server()}}, \code{\link[=pm_view]{pm_view()}}
 }

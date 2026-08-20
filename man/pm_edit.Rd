@@ -10,12 +10,12 @@ pm_edit(input, header_json = NULL, metadata = NULL, verbose = TRUE)
 \item{input}{Path to PMTiles file to edit.}
 
 \item{header_json}{Path to JSON file containing modified header data.
-Use `pm_show(input, header_json = TRUE)` to get current header.}
+Use \code{pm_show(input, header_json = TRUE)} to get current header.}
 
 \item{metadata}{Path to JSON file containing replacement metadata.
-Use `pm_show(input, metadata = TRUE)` to get current metadata.}
+Use \code{pm_show(input, metadata = TRUE)} to get current metadata.}
 
-\item{verbose}{Logical. If `TRUE`, prints progress information. Default is `TRUE`.}
+\item{verbose}{Logical. If \code{TRUE}, prints progress information. Default is \code{TRUE}.}
 }
 \value{
 Invisibly returns the path to the edited archive.
@@ -25,25 +25,28 @@ Modify parts of the PMTiles archive header or replace the JSON metadata.
 Editing only the header modifies the file in-place, while editing metadata
 creates a new copy.
 }
-\details{
-# Editable Header Fields
-
+\section{Editable Header Fields}{
 The following header fields can be modified:
-- `tile_type`: Type of tiles (e.g., "mvt", "png", "jpg")
-- `tile_compression`: Compression format
-- `minzoom`: Minimum zoom level
-- `maxzoom`: Maximum zoom level
-- `bounds`: Geographic bounds
-- `center`: Center point and zoom
+\itemize{
+\item \code{tile_type}: Type of tiles (e.g., "mvt", "png", "jpg")
+\item \code{tile_compression}: Compression format
+\item \code{minzoom}: Minimum zoom level
+\item \code{maxzoom}: Maximum zoom level
+\item \code{bounds}: Geographic bounds
+\item \code{center}: Center point and zoom
+}
 
 Other header fields are not editable.
-
-# Important Notes
-
-- Editing only the header modifies the file in-place
-- Writing new metadata requires creating a new archive copy
-- The new copy will replace the original file
 }
+
+\section{Important Notes}{
+\itemize{
+\item Editing only the header modifies the file in-place
+\item Writing new metadata requires creating a new archive copy
+\item The new copy will replace the original file
+}
+}
+
 \examples{
 \dontrun{
 # Get current header and metadata

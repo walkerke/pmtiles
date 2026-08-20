@@ -11,62 +11,81 @@ pm_upload(input, remote, bucket, max_concurrency = 2, verbose = TRUE)
 
 \item{remote}{Name for the PMTiles file in cloud storage.}
 
-\item{bucket}{Bucket specification (e.g., "s3://bucket-name"). See Details.}
+\item{bucket}{Destination bucket: either a helper object from
+\code{\link[=r2_bucket]{r2_bucket()}}, \code{\link[=s3_bucket]{s3_bucket()}}, \code{\link[=gcs_bucket]{gcs_bucket()}}, \code{\link[=azure_bucket]{azure_bucket()}}, or
+\code{\link[=s3_compatible_bucket]{s3_compatible_bucket()}}, or a bucket URL string
+(e.g., \code{"s3://bucket-name"}). See Details.}
 
 \item{max_concurrency}{Maximum number of parallel upload threads. Default is 2.}
 
-\item{verbose}{Logical. If `TRUE`, prints progress information. Default is `TRUE`.}
+\item{verbose}{Logical. If \code{TRUE}, prints progress information. Default is \code{TRUE}.}
 }
 \value{
-Invisibly returns `TRUE` on success.
+Invisibly returns \code{TRUE} on success.
 }
 \description{
-Upload a local PMTiles archive to cloud storage (S3, Azure, Google Cloud).
-Requires appropriate authentication via environment variables.
+Upload a local PMTiles archive to cloud storage (S3, Cloudflare R2, Google
+Cloud Storage, Azure, or any S3-compatible service). The easiest way to
+specify the destination is with a bucket helper -- see \code{\link[=r2_bucket]{r2_bucket()}} and
+friends -- which builds the bucket URL and can carry credentials for you.
 }
-\details{
-# Authentication
+\section{Specifying the bucket}{
+The bucket helpers handle each provider's URL format and authentication
+details (see \link{bucket_helpers} for provider-by-provider setup guides):
 
-PMTiles uses standard cloud provider authentication methods:
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Cloudflare R2
+bucket = r2_bucket("my-tiles", account_id = "your-account-id")
 
-**AWS S3:**
-- Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables
-- Requires write permissions to the bucket
+# Amazon S3
+bucket = s3_bucket("my-tiles", region = "us-east-1")
 
-**S3-compatible (R2, MinIO, etc.):**
-- Same credentials as S3
-- Specify endpoint in bucket parameter:
-  `bucket = "s3://bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"`
+# Google Cloud Storage
+bucket = gcs_bucket("my-tiles")
 
-**Azure Blob:**
-- Uses Azure SDK default authentication
-- `bucket = "azblob://container?storage_account=ACCOUNT"`
+# Azure Blob Storage
+bucket = azure_bucket("my-container", storage_account = "myaccount")
+}\if{html}{\out{</div>}}
 
-**Google Cloud Storage:**
-- Uses Application Default Credentials
-- `bucket = "gs://bucket-name"`
+A raw URL string is also accepted, e.g.
+\code{"s3://bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"}.
 }
+
+\section{Authentication}{
+Credentials can be supplied directly to the bucket helpers (passed only to
+the pmtiles subprocess), or via the provider's standard environment
+variables:
+\itemize{
+\item \strong{S3 / R2 / S3-compatible}: \code{AWS_ACCESS_KEY_ID}, \code{AWS_SECRET_ACCESS_KEY}
+\item \strong{Google Cloud Storage}: Application Default Credentials or
+\code{GOOGLE_APPLICATION_CREDENTIALS}
+\item \strong{Azure}: \code{AZURE_STORAGE_ACCOUNT} plus \code{AZURE_STORAGE_KEY} or
+\code{AZURE_STORAGE_SAS_TOKEN}
+}
+}
+
 \examples{
 \dontrun{
-# Set credentials
-Sys.setenv(
-  AWS_ACCESS_KEY_ID = "your-key-id",
-  AWS_SECRET_ACCESS_KEY = "your-secret"
-)
-
-# Upload to S3
+# Upload to Cloudflare R2, with credentials stored in ~/.Renviron
 pm_upload(
   "local.pmtiles",
   "remote.pmtiles",
-  bucket = "s3://my-bucket"
+  bucket = r2_bucket(
+    "my-tiles",
+    account_id = "your-cloudflare-account-id",
+    access_key = Sys.getenv("R2_ACCESS_KEY_ID"),
+    secret_key = Sys.getenv("R2_SECRET_ACCESS_KEY")
+  )
 )
 
-# Upload to Cloudflare R2
+# Upload to S3 using the standard AWS credential chain
 pm_upload(
   "local.pmtiles",
   "remote.pmtiles",
-  bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"
+  bucket = s3_bucket("my-bucket", region = "us-east-1")
 )
 }
 
+}
+\seealso{
+\link{bucket_helpers}
 }

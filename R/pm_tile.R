@@ -9,7 +9,10 @@
 #' @param y Integer tile row.
 #' @param output Path where the tile should be saved. If `NULL` (default),
 #'   returns the raw tile data as a raw vector.
-#' @param bucket Optional remote bucket specification for cloud storage.
+#' @param bucket Optional remote bucket specification for cloud storage:
+#'   a helper object from [r2_bucket()], [s3_bucket()], [gcs_bucket()],
+#'   [azure_bucket()], or [s3_compatible_bucket()], or a bucket URL string
+#'   (e.g., `"s3://bucket-name"`).
 #'
 #' @return
 #' If `output` is specified, writes tile to file and returns the output path invisibly.
@@ -32,11 +35,13 @@ pm_tile <- function(input, z, x, y, output = NULL, bucket = NULL) {
     stop("z, x, and y must be numeric values", call. = FALSE)
   }
 
+  bucket <- resolve_bucket(bucket)
+
   # Build command arguments
   args <- c("tile", input, as.character(z), as.character(x), as.character(y))
 
-  if (!is.null(bucket)) {
-    args <- c(args, paste0("--bucket=", bucket))
+  if (!is.null(bucket$url)) {
+    args <- c(args, paste0("--bucket=", bucket$url))
   }
 
   # Execute command - capture binary output
@@ -45,14 +50,22 @@ pm_tile <- function(input, z, x, y, output = NULL, bucket = NULL) {
     tmpfile <- tempfile(fileext = ".tile")
     on.exit(unlink(tmpfile), add = TRUE)
 
-    result <- pmtiles_exec(args, stdout = tmpfile)
+    result <- pmtiles_exec(args, stdout = tmpfile, env = bucket$env)
 
     # Read binary data
     raw_data <- readBin(tmpfile, "raw", n = file.info(tmpfile)$size)
     return(raw_data)
   } else {
-    # Write directly to file
-    result <- pmtiles_exec(args, stdout = output)
+    # Write CLI output to a temp file first: a failed run emits error text,
+    # not a tile, and must not clobber a pre-existing output file
+    tmp_out <- tempfile(fileext = ".tile")
+    on.exit(unlink(tmp_out), add = TRUE)
+
+    result <- pmtiles_exec(args, stdout = tmp_out, env = bucket$env)
+
+    if (!file.copy(tmp_out, output, overwrite = TRUE)) {
+      stop("Failed to write tile to: ", output, call. = FALSE)
+    }
     message("Tile written to: ", output)
     return(invisible(output))
   }

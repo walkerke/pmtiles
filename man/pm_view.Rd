@@ -25,37 +25,37 @@ pm_view(
 \arguments{
 \item{input}{Path to a local PMTiles file, URL to a remote archive, or TileJSON endpoint URL.}
 
-\item{source_layer}{Name of the source layer to display. If `NULL` (default),
+\item{source_layer}{Name of the source layer to display. If \code{NULL} (default),
 automatically uses the first layer found in the metadata.}
 
 \item{style}{Base map style. Can be a mapgl style function like
-`mapgl::openfreemap_style("positron")` or a style name. Default is `"positron"`.}
+\code{mapgl::openfreemap_style("positron")} or a style name. Default is \code{"positron"}.}
 
 \item{port}{Port for local server (only used for local files). Default is 8080.}
 
-\item{layer_type}{Type of layer to add: `"fill"`, `"line"`, `"circle"`, or `"auto"`.
-Default is `"auto"` which detects based on geometry type.}
+\item{layer_type}{Type of layer to add: \code{"fill"}, \code{"line"}, \code{"circle"}, or \code{"auto"}.
+Default is \code{"auto"} which detects based on geometry type.}
 
-\item{fill_color}{Fill color for polygons. Default is `"#088"`.}
+\item{fill_color}{Fill color for polygons. Default is \code{"#088"}.}
 
 \item{fill_opacity}{Fill opacity. Default is 0.5.}
 
-\item{line_color}{Line color. Default is `"#088"`.}
+\item{line_color}{Line color. Default is \code{"#088"}.}
 
 \item{line_width}{Line width. Default is 1.}
 
-\item{circle_color}{Circle color for points. Default is `"#088"`.}
+\item{circle_color}{Circle color for points. Default is \code{"#088"}.}
 
 \item{circle_radius}{Circle radius for points. Default is 5.}
 
-\item{inspect_features}{Logical. If `TRUE`, shows tooltips with feature attributes.
-Default is `FALSE`.}
+\item{inspect_features}{Logical. If \code{TRUE}, shows tooltips with feature attributes.
+Default is \code{FALSE}.}
 
-\item{highlight}{Logical. If `TRUE`, enables hover highlighting effects. Requires
-the tileset to have an ID property configured. Default is `FALSE`.}
+\item{highlight}{Logical. If \code{TRUE}, enables hover highlighting effects. Requires
+the tileset to have an ID property configured. Default is \code{FALSE}.}
 
 \item{promote_id}{Optional. Column name to promote as the feature ID for hover
-highlighting. Only used when `highlight = TRUE`. If `NULL`, assumes the tileset
+highlighting. Only used when \code{highlight = TRUE}. If \code{NULL}, assumes the tileset
 already has an ID property configured during tile generation.}
 
 \item{...}{Additional arguments passed to the layer function.}
@@ -68,45 +68,50 @@ Quickly visualize a PMTiles archive or TileJSON endpoint on an interactive map u
 Automatically detects the tile type and applies appropriate styling.
 For local files, automatically starts a background server.
 }
-\details{
-# Local vs Remote Files
-
-**Local files**: If `input` is a local file path, `pm_view()` automatically:
-1. Starts a background PMTiles server via `pm_serve()`
-2. Extracts metadata to determine source layer and geometry type
-3. Creates an appropriate map visualization
+\section{Local vs Remote Files}{
+\strong{Local files}: If \code{input} is a local file path, \code{pm_view()} automatically:
+\enumerate{
+\item Starts a background PMTiles server via \code{pm_serve()}
+\item Extracts metadata to determine source layer and geometry type
+\item Creates an appropriate map visualization
+}
 
 The server runs in the background and will be automatically stopped when the
-R session ends. You can manually stop it with `pm_stop_server()`.
+R session ends. You can manually stop it with \code{pm_stop_server()}.
 
-**Remote files**: If `input` is a URL (starts with `http://` or `https://`),
+\strong{Remote files}: If \code{input} is a URL (starts with \verb{http://} or \verb{https://}),
 uses the URL directly without starting a local server.
 
-**TileJSON endpoints**: If `input` ends with `.json`, it's treated as a TileJSON
-endpoint. The function fetches the TileJSON metadata and uses `add_vector_source()`
+\strong{TileJSON endpoints}: If \code{input} ends with \code{.json}, it's treated as a TileJSON
+endpoint. The function fetches the TileJSON metadata and uses \code{add_vector_source()}
 to display the tiles.
+}
 
-# Geometry Detection
-
-When `layer_type = "auto"`, the function inspects the metadata to determine
+\section{Geometry Detection}{
+When \code{layer_type = "auto"}, the function inspects the metadata to determine
 the geometry type and applies appropriate styling:
-- Polygon/MultiPolygon → fill layer
-- LineString/MultiLineString → line layer
-- Point/MultiPoint → circle layer
+\itemize{
+\item Polygon/MultiPolygon → fill layer
+\item LineString/MultiLineString → line layer
+\item Point/MultiPoint → circle layer
+}
+}
 
-# Feature Inspection and Highlighting
-
-Set `inspect_features = TRUE` to show tooltips with feature attributes on hover.
+\section{Feature Inspection and Highlighting}{
+Set \code{inspect_features = TRUE} to show tooltips with feature attributes on hover.
 This works for any tileset.
 
-Set `highlight = TRUE` to enable hover highlighting effects (features change
-color/style when hovered). **Important**: This requires the tileset to have an
+Set \code{highlight = TRUE} to enable hover highlighting effects (features change
+color/style when hovered). \strong{Important}: This requires the tileset to have an
 ID property configured. You can either:
-- Configure IDs during tile generation (recommended)
-- Use `promote_id = "column_name"` to promote an existing attribute as the ID
+\itemize{
+\item Configure IDs during tile generation (recommended)
+\item Use \code{promote_id = "column_name"} to promote an existing attribute as the ID
+}
 
 If the tileset lacks proper IDs, highlighting will not work even if enabled.
 }
+
 \examples{
 \dontrun{
 # View a local PMTiles file

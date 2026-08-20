@@ -62,8 +62,8 @@ pm_create(
 \item{input}{An sf object, path to a GeoJSON/FlatGeobuf/CSV file, or a list
 for multi-layer output. For multi-layer PMTiles, provide either:
 \itemize{
-  \item A list of sf objects or file paths (all layers share the same options)
-  \item A list of \code{\link{pm_layer}} objects (each layer can have different options)
+\item A list of sf objects or file paths (all layers share the same options)
+\item A list of \code{\link{pm_layer}} objects (each layer can have different options)
 }}
 
 \item{output}{Path to output file (.pmtiles or .mbtiles)}
@@ -214,9 +214,9 @@ See \url{https://github.com/felt/tippecanoe} for installation instructions.
 This function wraps the tippecanoe command-line tool. Tippecanoe must be
 installed separately:
 \itemize{
-  \item macOS: \code{brew install tippecanoe}
-  \item Ubuntu: \code{sudo apt-get install tippecanoe}
-  \item From source: \url{https://github.com/felt/tippecanoe}
+\item macOS: \code{brew install tippecanoe}
+\item Ubuntu: \code{sudo apt-get install tippecanoe}
+\item From source: \url{https://github.com/felt/tippecanoe}
 }
 
 The function handles sf objects by converting them to temporary GeoJSON files.
@@ -346,5 +346,5 @@ pm_create(
 
 }
 \seealso{
-[pm_layer()] for creating layers with per-layer options
+\code{\link[=pm_layer]{pm_layer()}} for creating layers with per-layer options
 }

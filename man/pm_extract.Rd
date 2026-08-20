@@ -24,18 +24,21 @@ pm_extract(
 \item{output}{Path for the output PMTiles archive.}
 
 \item{bbox}{Numeric vector of bounding box coordinates in the form
-`c(min_lon, min_lat, max_lon, max_lat)`. Mutually exclusive with `region`.}
+\code{c(min_lon, min_lat, max_lon, max_lat)}. Mutually exclusive with \code{region}.}
 
 \item{region}{Path to a GeoJSON file containing a Polygon, MultiPolygon,
 Feature, or FeatureCollection defining the area of interest.
-Mutually exclusive with `bbox`.}
+Mutually exclusive with \code{bbox}.}
 
 \item{minzoom}{Minimum zoom level to extract (inclusive). Default is 0.}
 
 \item{maxzoom}{Maximum zoom level to extract (inclusive). If not specified,
 extracts all zoom levels from the source.}
 
-\item{bucket}{Optional remote bucket specification if `input` is remote.}
+\item{bucket}{Optional remote bucket specification if \code{input} is remote:
+a helper object from \code{\link[=r2_bucket]{r2_bucket()}}, \code{\link[=s3_bucket]{s3_bucket()}}, \code{\link[=gcs_bucket]{gcs_bucket()}},
+\code{\link[=azure_bucket]{azure_bucket()}}, or \code{\link[=s3_compatible_bucket]{s3_compatible_bucket()}}, or a bucket URL string
+(e.g., \code{"s3://bucket-name"}).}
 
 \item{download_threads}{Number of parallel download threads for remote archives.
 Default is 4.}
@@ -43,10 +46,10 @@ Default is 4.}
 \item{overfetch}{Ratio of extra data to download to minimize number of requests.
 For example, 0.05 means 5 percent overfetch. Default is 0.05.}
 
-\item{dry_run}{Logical. If `TRUE`, calculates tiles to extract without
-actually downloading them. Default is `FALSE`.}
+\item{dry_run}{Logical. If \code{TRUE}, calculates tiles to extract without
+actually downloading them. Default is \code{FALSE}.}
 
-\item{verbose}{Logical. If `TRUE`, prints progress information. Default is `TRUE`.}
+\item{verbose}{Logical. If \code{TRUE}, prints progress information. Default is \code{TRUE}.}
 }
 \value{
 Invisibly returns the path to the output archive.
@@ -56,8 +59,8 @@ Create a smaller PMTiles archive from a larger one by extracting a subset
 of zoom levels or a geographic region. The source archive can be local or remote.
 }
 \details{
-Extracting a full sub-pyramid from zoom 0 to `maxzoom` is an efficient
-operation. However, using a `minzoom` > 0 may require many more requests
+Extracting a full sub-pyramid from zoom 0 to \code{maxzoom} is an efficient
+operation. However, using a \code{minzoom} > 0 may require many more requests
 and should only be used when necessary.
 }
 \examples{

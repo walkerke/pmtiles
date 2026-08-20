@@ -121,7 +121,7 @@ mapboxgl() |>
 
 # Serve from cloud storage without downloading
 pm_serve_zxy(
-  bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto",
+  bucket = r2_bucket("my-bucket", account_id = "your-cloudflare-account-id"),
   public_url = "http://localhost:8080"
 )
 
@@ -165,7 +165,9 @@ pm_view("http://localhost:8080/YOUR_TILES.pmtiles", inspect_features = TRUE)
 - `pm_convert()` - Convert MBTiles to/from PMTiles
 - `pm_extract()` - Extract a region or zoom levels
 - `pm_cluster()` - Cluster tiles for cloud upload
-- `pm_upload()` - Upload to S3/R2/GCS
+- `pm_upload()` - Upload to S3/R2/GCS/Azure
+- `r2_bucket()`, `s3_bucket()`, `gcs_bucket()`, `azure_bucket()`,
+  `s3_compatible_bucket()` - Bucket helpers for cloud storage configuration
 
 ### Editing
 - `pm_edit()` - Modify archive metadata
@@ -213,13 +215,63 @@ pm_edit(
 
 ### Upload to cloud storage
 
+Bucket helpers build the destination URL for each provider, so you never
+hand-assemble an `s3://...?endpoint=...` string. Credentials passed to a
+helper go only to the pmtiles subprocess — they are never written to your R
+session's environment.
+
 ```r
-# Upload to Cloudflare R2
+# Cloudflare R2 (recommended host: no egress fees)
+# Account ID: R2 dashboard > Account Details panel
+# Keys: R2 dashboard > Manage R2 API Tokens
 pm_upload(
   input = "data.pmtiles",
-  bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com"
+  remote = "data.pmtiles",
+  bucket = r2_bucket(
+    "my-tiles",
+    account_id = "your-cloudflare-account-id",
+    access_key = Sys.getenv("R2_ACCESS_KEY_ID"),
+    secret_key = Sys.getenv("R2_SECRET_ACCESS_KEY")
+  )
+)
+
+# Amazon S3 (uses your standard AWS credential chain)
+pm_upload(
+  "data.pmtiles", "data.pmtiles",
+  bucket = s3_bucket("my-tiles", region = "us-east-1")
+)
+
+# Google Cloud Storage (Application Default Credentials)
+pm_upload(
+  "data.pmtiles", "data.pmtiles",
+  bucket = gcs_bucket("my-tiles")
+)
+
+# Azure Blob Storage
+pm_upload(
+  "data.pmtiles", "data.pmtiles",
+  bucket = azure_bucket(
+    "tiles-container",
+    storage_account = "myaccount",
+    access_key = Sys.getenv("AZURE_STORAGE_KEY")
+  )
+)
+
+# Any other S3-compatible service (MinIO, DigitalOcean Spaces, Backblaze B2, ...)
+# The region is inferred from recognized endpoints (here: nyc3); for other
+# services, pass region = explicitly
+pm_upload(
+  "data.pmtiles", "data.pmtiles",
+  bucket = s3_compatible_bucket(
+    "my-tiles",
+    endpoint = "https://nyc3.digitaloceanspaces.com"
+  )
 )
 ```
+
+The same helpers work everywhere a `bucket` is accepted: `pm_show()`,
+`pm_extract()`, `pm_tile()`, and `pm_serve_zxy()`. See `?r2_bucket` for
+provider-by-provider setup instructions.
 
 ## Working with Remote PMTiles
 

@@ -16,85 +16,95 @@ pm_serve_zxy(
 }
 \arguments{
 \item{path}{Directory containing PMTiles files, or a specific path prefix.
-Default is current directory (`"."`).}
+Default is current directory (\code{"."}).}
 
-\item{bucket}{Optional cloud storage bucket specification (e.g., `"s3://bucket-name"`
-or `"s3://bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"`).
+\item{bucket}{Optional cloud storage bucket specification: a helper object
+from \code{\link[=r2_bucket]{r2_bucket()}}, \code{\link[=s3_bucket]{s3_bucket()}}, \code{\link[=gcs_bucket]{gcs_bucket()}}, \code{\link[=azure_bucket]{azure_bucket()}}, or
+\code{\link[=s3_compatible_bucket]{s3_compatible_bucket()}}, or a bucket URL string (e.g., \code{"s3://bucket-name"}
+or \code{"s3://bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"}).
 When specified, serves tiles directly from cloud storage without downloading.}
 
 \item{port}{Port number for the tile server. Default is 8080.}
 
-\item{cors}{CORS origins to allow. Can be `"*"` for all origins, a character
-vector of specific origins, or `NULL` for no CORS headers. Default is `"*"`.}
+\item{cors}{CORS origins to allow. Can be \code{"*"} for all origins, a character
+vector of specific origins, or \code{NULL} for no CORS headers. Default is \code{"*"}.}
 
 \item{cache_size}{Cache size in megabytes. Default is 64 MB.}
 
 \item{public_url}{Public-facing URL for TileJSON generation (e.g.,
-`"https://example.com"`). Required for accurate TileJSON metadata.}
+\code{"https://example.com"}). Required for accurate TileJSON metadata.}
 
-\item{background}{Logical. If `TRUE`, runs server in background using `processx`.
-If `FALSE` (default), runs in foreground (blocking).}
+\item{background}{Logical. If \code{TRUE}, runs server in background using \code{processx}.
+If \code{FALSE} (default), runs in foreground (blocking).}
 }
 \value{
-If `background = FALSE`, blocks until server is stopped (Ctrl+C).
-  If `background = TRUE`, invisibly returns the `processx::process` object.
+If \code{background = FALSE}, blocks until server is stopped (Ctrl+C).
+If \code{background = TRUE}, invisibly returns the \code{processx::process} object.
 }
 \description{
 Start a local tile server that serves PMTiles archives as standard Z/X/Y tile
-endpoints (e.g., `/\{tileset\}/\{z\}/\{x\}/\{y\}.mvt`). This uses the native
-`pmtiles serve` command and works with any map client, not just PMTiles.js.
+endpoints (e.g., \verb{/\\\{tileset\\\}/\\\{z\\\}/\\\{x\\\}/\\\{y\\\}.mvt}). This uses the native
+\verb{pmtiles serve} command and works with any map client, not just PMTiles.js.
 
-Unlike `pm_serve()` which serves raw .pmtiles files for direct consumption by
+Unlike \code{pm_serve()} which serves raw .pmtiles files for direct consumption by
 PMTiles.js, this function extracts individual tiles on-demand, making the tiles
 accessible to any mapping library that supports standard tile URLs.
 }
-\details{
-# Tile Endpoints
-
+\section{Tile Endpoints}{
 The server provides these endpoints:
-
-- **Tiles**: `http://localhost:PORT/TILESET/\{z\}/\{x\}/\{y\}.ext`
-  - Extension (`.mvt`, `.png`, `.jpg`, etc.) is auto-detected from PMTiles metadata
-- **TileJSON**: `http://localhost:PORT/TILESET.json` (requires `public_url`)
-  - Returns TileJSON metadata for the tileset
+\itemize{
+\item \strong{Tiles}: \verb{http://localhost:PORT/TILESET/\\\{z\\\}/\\\{x\\\}/\\\{y\\\}.ext}
+\itemize{
+\item Extension (\code{.mvt}, \code{.png}, \code{.jpg}, etc.) is auto-detected from PMTiles metadata
+}
+\item \strong{TileJSON}: \verb{http://localhost:PORT/TILESET.json} (requires \code{public_url})
+\itemize{
+\item Returns TileJSON metadata for the tileset
+}
+}
 
 This approach works with any map client and is particularly useful for:
-- Large PMTiles files (multi-GB)
-- Serving directly from cloud storage
-- Clients that don't support the PMTiles protocol
+\itemize{
+\item Large PMTiles files (multi-GB)
+\item Serving directly from cloud storage
+\item Clients that don't support the PMTiles protocol
+}
+}
 
-# Cloud Storage
-
+\section{Cloud Storage}{
 You can serve tiles directly from cloud storage without downloading:
 
-**Cloudflare R2:**
-```r
-pm_serve_zxy(
+\strong{Cloudflare R2:}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{pm_serve_zxy(
   bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"
 )
-```
+}\if{html}{\out{</div>}}
 
-**AWS S3:**
-```r
-pm_serve_zxy(bucket = "s3://my-bucket")
-```
+\strong{AWS S3:}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{pm_serve_zxy(bucket = "s3://my-bucket")
+}\if{html}{\out{</div>}}
 
 Requires appropriate environment variables for authentication
-(`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
-
-# Background Mode
-
-When `background = TRUE`, the server runs in a background process. Use
-`pm_stop_server()` to stop background servers.
-
-# Comparison with pm_serve()
-
-- `pm_serve()`: Serves raw .pmtiles files for PMTiles.js (HTTP Range requests)
-- `pm_serve_zxy()`: Serves individual Z/X/Y tiles for any map client
-
-Use `pm_serve_zxy()` when you need standard tile URLs or want to serve from
-cloud storage. Use `pm_serve()` for quick local preview with PMTiles.js.
+(\code{AWS_ACCESS_KEY_ID}, \code{AWS_SECRET_ACCESS_KEY}).
 }
+
+\section{Background Mode}{
+When \code{background = TRUE}, the server runs in a background process. Use
+\code{pm_stop_server()} to stop background servers.
+}
+
+\section{Comparison with pm_serve()}{
+\itemize{
+\item \code{pm_serve()}: Serves raw .pmtiles files for PMTiles.js (HTTP Range requests)
+\item \code{pm_serve_zxy()}: Serves individual Z/X/Y tiles for any map client
+}
+
+Use \code{pm_serve_zxy()} when you need standard tile URLs or want to serve from
+cloud storage. Use \code{pm_serve()} for quick local preview with PMTiles.js.
+}
+
 \examples{
 \dontrun{
 # Serve all PMTiles in current directory

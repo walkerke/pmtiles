@@ -6,7 +6,9 @@
 #'
 #' @param input Path to a local PMTiles file or URL to a remote archive.
 #'   Remote archives can be HTTP URLs or cloud storage paths.
-#' @param bucket Optional remote bucket specification for cloud storage
+#' @param bucket Optional remote bucket specification for cloud storage:
+#'   a helper object from [r2_bucket()], [s3_bucket()], [gcs_bucket()],
+#'   [azure_bucket()], or [s3_compatible_bucket()], or a bucket URL string
 #'   (e.g., "s3://bucket-name"). See Details for cloud storage usage.
 #' @param metadata Logical. If `TRUE`, return only the JSON metadata.
 #'   Default is `FALSE`.
@@ -20,13 +22,16 @@
 #' @details
 #' # Cloud Storage
 #'
-#' PMTiles supports reading from cloud storage buckets:
-#' - **S3**: `bucket = "s3://BUCKET_NAME"`
-#' - **S3-compatible** (R2, etc.): `bucket = "s3://BUCKET?endpoint=https://example.com&region=auto"`
-#' - **Azure**: `bucket = "azblob://CONTAINER?storage_account=ACCOUNT"`
-#' - **Google Cloud**: `bucket = "gs://BUCKET_NAME"`
+#' PMTiles supports reading from cloud storage buckets. The easiest way to
+#' specify one is with a bucket helper (see [bucket_helpers]):
+#' - **Cloudflare R2**: `bucket = r2_bucket("my-tiles", account_id = "...")`
+#' - **S3**: `bucket = s3_bucket("my-tiles", region = "us-east-1")`
+#' - **Azure**: `bucket = azure_bucket("container", storage_account = "...")`
+#' - **Google Cloud**: `bucket = gcs_bucket("my-tiles")`
 #'
-#' Authentication uses standard cloud provider environment variables
+#' Raw URL strings such as `"s3://BUCKET?endpoint=https://example.com&region=auto"`
+#' are also accepted. Authentication uses credentials supplied to the bucket
+#' helper, or standard cloud provider environment variables
 #' (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` for S3).
 #'
 #' @return
@@ -42,10 +47,10 @@
 #' # Get metadata as list
 #' metadata <- pm_show("archive.pmtiles", metadata = TRUE)
 #'
-#' # Show remote archive
+#' # Show remote archive on Cloudflare R2
 #' pm_show(
 #'   "archive.pmtiles",
-#'   bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"
+#'   bucket = r2_bucket("my-bucket", account_id = "your-account-id")
 #' )
 #'
 #' # Get TileJSON
@@ -69,11 +74,13 @@ pm_show <- function(input,
     input <- path.expand(input)
   }
 
+  bucket <- resolve_bucket(bucket)
+
   # Build command arguments
   args <- c("show", input)
 
-  if (!is.null(bucket)) {
-    args <- c(args, paste0("--bucket=", bucket))
+  if (!is.null(bucket$url)) {
+    args <- c(args, paste0("--bucket=", bucket$url))
   }
 
   if (metadata) {
@@ -92,7 +99,7 @@ pm_show <- function(input,
   }
 
   # Execute command
-  result <- pmtiles_exec(args)
+  result <- pmtiles_exec(args, env = bucket$env)
 
   # Parse and return based on output type
   if (metadata || header_json || tilejson) {

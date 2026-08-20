@@ -17,42 +17,50 @@ pm_show(
 \item{input}{Path to a local PMTiles file or URL to a remote archive.
 Remote archives can be HTTP URLs or cloud storage paths.}
 
-\item{bucket}{Optional remote bucket specification for cloud storage
+\item{bucket}{Optional remote bucket specification for cloud storage:
+a helper object from \code{\link[=r2_bucket]{r2_bucket()}}, \code{\link[=s3_bucket]{s3_bucket()}}, \code{\link[=gcs_bucket]{gcs_bucket()}},
+\code{\link[=azure_bucket]{azure_bucket()}}, or \code{\link[=s3_compatible_bucket]{s3_compatible_bucket()}}, or a bucket URL string
 (e.g., "s3://bucket-name"). See Details for cloud storage usage.}
 
-\item{metadata}{Logical. If `TRUE`, return only the JSON metadata.
-Default is `FALSE`.}
+\item{metadata}{Logical. If \code{TRUE}, return only the JSON metadata.
+Default is \code{FALSE}.}
 
-\item{header_json}{Logical. If `TRUE`, return only the header as JSON.
-Default is `FALSE`.}
+\item{header_json}{Logical. If \code{TRUE}, return only the header as JSON.
+Default is \code{FALSE}.}
 
-\item{tilejson}{Logical. If `TRUE`, return TileJSON specification.
-Default is `FALSE`.}
+\item{tilejson}{Logical. If \code{TRUE}, return TileJSON specification.
+Default is \code{FALSE}.}
 
 \item{public_url}{Character. Public base URL for TileJSON
-(e.g., "https://example.com/tiles"). Only used when `tilejson = TRUE`.}
+(e.g., "https://example.com/tiles"). Only used when \code{tilejson = TRUE}.}
 }
 \value{
-- If `metadata = TRUE` or `header_json = TRUE` or `tilejson = TRUE`:
-  Returns a parsed list from the JSON output
-- Otherwise: Returns invisible `NULL` and prints archive information
+\itemize{
+\item If \code{metadata = TRUE} or \code{header_json = TRUE} or \code{tilejson = TRUE}:
+Returns a parsed list from the JSON output
+\item Otherwise: Returns invisible \code{NULL} and prints archive information
+}
 }
 \description{
 Inspect a local or remote PMTiles archive and display header information
 and metadata.
 }
-\details{
-# Cloud Storage
-
-PMTiles supports reading from cloud storage buckets:
-- **S3**: `bucket = "s3://BUCKET_NAME"`
-- **S3-compatible** (R2, etc.): `bucket = "s3://BUCKET?endpoint=https://example.com&region=auto"`
-- **Azure**: `bucket = "azblob://CONTAINER?storage_account=ACCOUNT"`
-- **Google Cloud**: `bucket = "gs://BUCKET_NAME"`
-
-Authentication uses standard cloud provider environment variables
-(e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` for S3).
+\section{Cloud Storage}{
+PMTiles supports reading from cloud storage buckets. The easiest way to
+specify one is with a bucket helper (see \link{bucket_helpers}):
+\itemize{
+\item \strong{Cloudflare R2}: \code{bucket = r2_bucket("my-tiles", account_id = "...")}
+\item \strong{S3}: \code{bucket = s3_bucket("my-tiles", region = "us-east-1")}
+\item \strong{Azure}: \code{bucket = azure_bucket("container", storage_account = "...")}
+\item \strong{Google Cloud}: \code{bucket = gcs_bucket("my-tiles")}
 }
+
+Raw URL strings such as \code{"s3://BUCKET?endpoint=https://example.com&region=auto"}
+are also accepted. Authentication uses credentials supplied to the bucket
+helper, or standard cloud provider environment variables
+(e.g., \code{AWS_ACCESS_KEY_ID}, \code{AWS_SECRET_ACCESS_KEY} for S3).
+}
+
 \examples{
 \dontrun{
 # Show local archive info
@@ -61,10 +69,10 @@ pm_show("path/to/archive.pmtiles")
 # Get metadata as list
 metadata <- pm_show("archive.pmtiles", metadata = TRUE)
 
-# Show remote archive
+# Show remote archive on Cloudflare R2
 pm_show(
   "archive.pmtiles",
-  bucket = "s3://my-bucket?endpoint=https://account.r2.cloudflarestorage.com&region=auto"
+  bucket = r2_bucket("my-bucket", account_id = "your-account-id")
 )
 
 # Get TileJSON
