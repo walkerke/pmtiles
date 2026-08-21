@@ -86,9 +86,11 @@ test_that("a failed pm_merge preserves an existing output file", {
     pm_create(gj, valid, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
   )
 
-  # a truncated archive makes the merge fail partway through
+  # truncate only the final tile-data bytes: the header and directories
+  # still parse, so the CLI creates its output and fails partway through
+  # copying tile data -- the scenario that used to destroy the output
   truncated <- file.path(dir, "truncated.pmtiles")
-  writeBin(readBin(valid, "raw", n = 100), truncated)
+  writeBin(readBin(valid, "raw", n = file.size(valid) - 10), truncated)
 
   sentinel <- charToRaw("previous-output")
   output <- file.path(dir, "merged.pmtiles")
@@ -102,4 +104,42 @@ test_that("a failed pm_merge preserves an existing output file", {
   # the pre-existing output survives the failed merge untouched
   expect_true(file.exists(output))
   expect_identical(readBin(output, "raw", n = 100), sentinel)
+})
+
+test_that("pm_merge does not corrupt an input aliased by a hard link", {
+  skip_if(Sys.which("tippecanoe") == "", "tippecanoe not available")
+
+  gj <- function(lon1, lon2) {
+    pt <- '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[%f,%f]}}'
+    sprintf('{"type":"FeatureCollection","features":[%s,%s]}',
+            sprintf(pt, lon1, 39), sprintf(pt, lon2, 41))
+  }
+
+  dir <- tempfile("merge-hardlink-test")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+
+  west_gj <- file.path(dir, "west.geojson")
+  east_gj <- file.path(dir, "east.geojson")
+  writeLines(gj(-101, -100), west_gj)
+  writeLines(gj(100, 101), east_gj)
+  west <- file.path(dir, "west.pmtiles")
+  east <- file.path(dir, "east.pmtiles")
+  suppressMessages({
+    pm_create(west_gj, west, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
+    pm_create(east_gj, east, layer_name = "pts", min_zoom = 4, max_zoom = 4, quiet = TRUE)
+  })
+  west_bytes <- readBin(west, "raw", n = file.size(west))
+
+  # an output that hard-links an input passes any path-based alias check
+  output <- file.path(dir, "merged.pmtiles")
+  linked <- tryCatch(file.link(west, output), warning = function(w) FALSE)
+  skip_if(!isTRUE(linked), "filesystem does not support hard links")
+
+  suppressMessages(pm_merge(c(west, east), output))
+
+  # the input is untouched and the output is the (larger) merged archive
+  expect_identical(readBin(west, "raw", n = file.size(west)), west_bytes)
+  expect_gt(file.size(output), length(west_bytes))
+  expect_output(pm_verify(output))
 })

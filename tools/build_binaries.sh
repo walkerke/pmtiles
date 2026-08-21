@@ -44,7 +44,7 @@ for platform in "${PLATFORMS[@]}"; do
     OUTPUT_PATH="$OUTPUT_DIR/$BINARY_NAME"
 
     echo "Building for $GOOS/$GOARCH..."
-    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w -X main.version=$VERSION" -o "$OUTPUT_PATH" main.go
+    GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$OUTPUT_PATH" main.go
 
     if [ $? -eq 0 ]; then
         echo "  ✓ Successfully built $OUTPUT_PATH"

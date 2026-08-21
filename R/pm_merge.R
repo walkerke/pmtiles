@@ -87,7 +87,22 @@ pm_merge <- function(inputs, output, verbose = TRUE) {
     cat(result$stdout)
   }
 
-  if (!file.copy(tmp_out, output, overwrite = TRUE)) {
+  # Replace the destination via rename, which swaps the directory entry:
+  # copying with overwrite = TRUE would write through a destination that
+  # hard-links an input (or anything else) and corrupt it. The staging file
+  # lives next to the output so the rename stays on one filesystem.
+  staging <- paste0(output, ".merging-", Sys.getpid())
+  on.exit(unlink(staging), add = TRUE)
+  if (!file.copy(tmp_out, staging, overwrite = TRUE)) {
+    stop("Failed to write merged archive to: ", output, call. = FALSE)
+  }
+  moved <- file.rename(staging, output)
+  if (!moved) {
+    # e.g. Windows with an existing destination: clear it, then retry
+    unlink(output)
+    moved <- file.rename(staging, output) || file.copy(staging, output)
+  }
+  if (!moved) {
     stop("Failed to write merged archive to: ", output, call. = FALSE)
   }
 
